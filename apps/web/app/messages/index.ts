@@ -23,7 +23,10 @@ export const messages = {
     },
     chart: {
       noData: "차트 데이터가 없습니다.",
-      ariaLabel: "캔들 차트"
+      ariaLabel: "캔들 차트",
+      zoomIn: "확대",
+      zoomOut: "축소",
+      resetZoom: "차트 초기화"
     },
     signal: {
       loading: "신호 로딩",
@@ -78,7 +81,10 @@ export const messages = {
     },
     chart: {
       noData: "No chart data is available.",
-      ariaLabel: "Candlestick chart"
+      ariaLabel: "Candlestick chart",
+      zoomIn: "Zoom in",
+      zoomOut: "Zoom out",
+      resetZoom: "Reset chart"
     },
     signal: {
       loading: "Signal loading",

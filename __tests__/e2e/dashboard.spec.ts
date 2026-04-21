@@ -20,6 +20,16 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
       }
     });
   });
+  await page.route("**/api/market/fx", async (route) => {
+    await route.fulfill({
+      json: {
+        pair: "USD/KRW",
+        rate: 1400,
+        timestamp: new Date().toISOString(),
+        source: "fixture"
+      }
+    });
+  });
   await page.route("**/api/market/candles**", async (route) => {
     await route.fulfill({ json: makeCandlePayload() });
   });
@@ -38,12 +48,17 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
 
   await expect(page.getByRole("heading", { name: "Trading Helper" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "AAPL" })).toBeVisible();
+  await expect(page.getByText("₩282,968")).toBeVisible();
   await expect(page.getByText("롱 우위")).toBeVisible();
   await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "확대" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "축소" })).toBeVisible();
 
   await page.getByRole("button", { name: "English" }).click();
+  await expect(page.getByText("$202.12")).toBeVisible();
   await expect(page.getByText("Long bias")).toBeVisible();
   await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();
 
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");

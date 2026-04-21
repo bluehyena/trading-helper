@@ -7,6 +7,8 @@ Trading Helper is a local, open-source dashboard for short-term U.S. equity anal
 ## Highlights
 
 - Local web dashboard for U.S. equities: watchlist, symbol search, candlestick chart, signal card, risk panel, and AI chat.
+- Scroll-wheel chart zoom, icon zoom controls, and drag panning across recent candles.
+- Localized price display: English shows USD; Korean converts the displayed U.S. stock price to KRW using the current USD/KRW rate and floors sub-won decimals.
 - Built for analysis support only: no broker connection, no order execution, no guaranteed real-time data.
 - Technical indicators: EMA 9/21/50/200, VWAP, RSI 14, MACD, Bollinger Bands, ATR, relative volume, OBV, and pivot support/resistance.
 - Signal engine outputs `LONG`, `SHORT`, or `NEUTRAL` with confidence, entry watch zone, invalidation, 1R/2R targets, reasons, warnings, and data timestamp.

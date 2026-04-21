@@ -4,7 +4,7 @@ import type { MarketContext } from "@trading-helper/ai";
 import type { AppLocale, Candle, Quote, SignalResult, SymbolSearchResult, Timeframe } from "@trading-helper/core";
 import { AlertCircle, RefreshCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { formatCurrency, formatPercent } from "../lib/format";
+import { formatCurrency, formatKrw, formatPercent } from "../lib/format";
 import { messages } from "../messages";
 import { AiChat } from "./AiChat";
 import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
@@ -19,6 +19,13 @@ interface CandlePayload {
   source: string;
 }
 
+interface FxRate {
+  pair: "USD/KRW";
+  rate: number;
+  timestamp: string;
+  source: string;
+}
+
 const watchlist = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"];
 const timeframes: Timeframe[] = ["1m", "5m", "15m", "30m", "1h", "1d"];
 
@@ -29,6 +36,7 @@ export function Dashboard() {
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
   const [payload, setPayload] = useState<CandlePayload | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [fxRate, setFxRate] = useState<FxRate | null>(null);
   const [searchResults, setSearchResults] = useState<SymbolSearchResult[]>([]);
   const [toggles, setToggles] = useState<IndicatorToggles>({
     ema: true,
@@ -98,15 +106,17 @@ export function Dashboard() {
     setError(null);
 
     try {
-      const [candlesResponse, quoteResponse] = await Promise.all([
+      const [candlesResponse, quoteResponse, fxResponse] = await Promise.all([
         fetch(
           `/api/market/candles?symbol=${encodeURIComponent(nextSymbol)}&timeframe=${nextTimeframe}&locale=${nextLocale}`
         ),
-        fetch(`/api/market/quote?symbol=${encodeURIComponent(nextSymbol)}`)
+        fetch(`/api/market/quote?symbol=${encodeURIComponent(nextSymbol)}`),
+        fetch("/api/market/fx")
       ]);
 
       const candlesJson = (await candlesResponse.json()) as CandlePayload | { error: string };
       const quoteJson = (await quoteResponse.json()) as Quote | { error: string };
+      const fxJson = (await fxResponse.json()) as FxRate | { error: string };
 
       if (!candlesResponse.ok || "error" in candlesJson) {
         throw new Error("error" in candlesJson ? candlesJson.error : messages[nextLocale].errors.candles);
@@ -114,6 +124,7 @@ export function Dashboard() {
 
       setPayload(candlesJson);
       setQuote("error" in quoteJson ? null : quoteJson);
+      setFxRate("error" in fxJson ? null : fxJson);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : messages[nextLocale].errors.market);
     } finally {
@@ -203,7 +214,7 @@ export function Dashboard() {
                 <h2>{symbol}</h2>
                 {quote && (
                   <>
-                    <span>{formatCurrency(quote.price)}</span>
+                    <span title={priceTitle(quote, fxRate, locale)}>{formatDisplayPrice(quote.price, fxRate, locale)}</span>
                     <span className={quote.changePercent >= 0 ? "positive" : "negative"}>
                       {formatPercent(quote.changePercent)}
                     </span>
@@ -246,7 +257,15 @@ export function Dashboard() {
             />
           </div>
           {error && <div className="error-box">{error}</div>}
-          {!error && payload && <CandlestickChart candles={payload.candles} locale={locale} labels={t.chart} toggles={toggles} />}
+          {!error && payload && (
+            <CandlestickChart
+              key={`${symbol}-${timeframe}`}
+              candles={payload.candles}
+              locale={locale}
+              labels={t.chart}
+              toggles={toggles}
+            />
+          )}
           {!error && isLoading && <div className="chart-empty">{t.errors.loading}</div>}
         </section>
 
@@ -259,6 +278,22 @@ export function Dashboard() {
       </section>
     </main>
   );
+}
+
+function formatDisplayPrice(priceUsd: number, fxRate: FxRate | null, locale: AppLocale): string {
+  if (locale === "ko" && fxRate) {
+    return formatKrw(priceUsd * fxRate.rate);
+  }
+
+  return formatCurrency(priceUsd);
+}
+
+function priceTitle(quote: Quote, fxRate: FxRate | null, locale: AppLocale): string {
+  if (locale === "ko" && fxRate) {
+    return `${formatCurrency(quote.price)} x ${fxRate.pair} ${fxRate.rate.toFixed(2)} (${fxRate.source})`;
+  }
+
+  return `${formatCurrency(quote.price)} USD`;
 }
 
 function Toggle({

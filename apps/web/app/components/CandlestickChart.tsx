@@ -1,6 +1,8 @@
 "use client";
 
 import { bollingerBands, ema, type AppLocale, type Candle, vwap } from "@trading-helper/core";
+import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { useState, type PointerEvent, type WheelEvent } from "react";
 import { formatCurrency } from "../lib/format";
 import type { UiMessages } from "../messages";
 
@@ -20,9 +22,21 @@ interface CandlestickChartProps {
 const WIDTH = 960;
 const HEIGHT = 420;
 const PADDING = { top: 18, right: 72, bottom: 34, left: 18 };
+const DEFAULT_VISIBLE_COUNT = 140;
+const MIN_VISIBLE_COUNT = 24;
+const ZOOM_STEP = 0.16;
 
 export function CandlestickChart({ candles, locale, labels, toggles }: CandlestickChartProps) {
-  const visible = candles.slice(-140);
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
+  const [offsetFromEnd, setOffsetFromEnd] = useState(0);
+  const [dragStart, setDragStart] = useState<{ x: number; offset: number } | null>(null);
+  const maxVisibleCount = Math.max(MIN_VISIBLE_COUNT, candles.length);
+  const boundedVisibleCount = clamp(visibleCount, MIN_VISIBLE_COUNT, maxVisibleCount);
+  const maxOffset = Math.max(0, candles.length - boundedVisibleCount);
+  const boundedOffset = clamp(offsetFromEnd, 0, maxOffset);
+  const end = Math.max(0, candles.length - boundedOffset);
+  const start = Math.max(0, end - boundedVisibleCount);
+  const visible = candles.slice(start, end);
   const closeValues = visible.map((candle) => candle.close);
   const ema9 = ema(closeValues, 9);
   const ema21 = ema(closeValues, 21);
@@ -59,53 +73,119 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
   const priceTicks = buildTicks(yMin, yMax, 5);
   const timeLabels = buildTimeLabels(visible, locale);
 
-  return (
-    <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={labels.ariaLabel}>
-      <rect width={WIDTH} height={HEIGHT} rx="8" className="chart-bg" />
-      {priceTicks.map((tick) => (
-        <g key={tick}>
-          <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={yFor(tick)} y2={yFor(tick)} className="grid-line" />
-          <text x={WIDTH - PADDING.right + 10} y={yFor(tick) + 4} className="axis-text">
-            {formatCurrency(tick)}
-          </text>
-        </g>
-      ))}
-      {timeLabels.map((label) => (
-        <text key={label.index} x={xFor(label.index)} y={HEIGHT - 12} textAnchor="middle" className="axis-text">
-          {label.text}
-        </text>
-      ))}
-      {toggles.bollinger && (
-        <>
-          <path d={linePath(bands.map((band) => band.upper), xFor, yFor)} className="line band-line" />
-          <path d={linePath(bands.map((band) => band.lower), xFor, yFor)} className="line band-line" />
-        </>
-      )}
-      {toggles.ema && (
-        <>
-          <path d={linePath(ema9, xFor, yFor)} className="line ema-fast" />
-          <path d={linePath(ema21, xFor, yFor)} className="line ema-slow" />
-        </>
-      )}
-      {toggles.vwap && <path d={linePath(vwapValues, xFor, yFor)} className="line vwap-line" />}
-      {visible.map((candle, index) => {
-        const x = xFor(index);
-        const openY = yFor(candle.open);
-        const closeY = yFor(candle.close);
-        const highY = yFor(candle.high);
-        const lowY = yFor(candle.low);
-        const isUp = candle.close >= candle.open;
-        const bodyTop = Math.min(openY, closeY);
-        const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+  function zoom(direction: "in" | "out") {
+    const multiplier = direction === "in" ? 1 - ZOOM_STEP : 1 + ZOOM_STEP;
+    const nextCount = clamp(Math.round(boundedVisibleCount * multiplier), MIN_VISIBLE_COUNT, maxVisibleCount);
+    setVisibleCount(nextCount);
+    setOffsetFromEnd((current) => clamp(current, 0, Math.max(0, candles.length - nextCount)));
+  }
 
-        return (
-          <g key={`${candle.timestamp}-${index}`} className={isUp ? "candle up" : "candle down"}>
-            <line x1={x} x2={x} y1={highY} y2={lowY} />
-            <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyHeight} rx="1.5" />
+  function resetZoom() {
+    setVisibleCount(DEFAULT_VISIBLE_COUNT);
+    setOffsetFromEnd(0);
+  }
+
+  function pan(candlesToMove: number) {
+    setOffsetFromEnd((current) => clamp(current + candlesToMove, 0, Math.max(0, candles.length - boundedVisibleCount)));
+  }
+
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+
+    if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+      const direction = Math.sign(event.deltaX || event.deltaY);
+      pan(direction * Math.max(1, Math.round(boundedVisibleCount * 0.04)));
+      return;
+    }
+
+    zoom(event.deltaY < 0 ? "in" : "out");
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragStart({ x: event.clientX, offset: boundedOffset });
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!dragStart) {
+      return;
+    }
+
+    const candleDelta = Math.round((event.clientX - dragStart.x) / Math.max(xStep, 1));
+    setOffsetFromEnd(clamp(dragStart.offset + candleDelta, 0, maxOffset));
+  }
+
+  function handlePointerEnd() {
+    setDragStart(null);
+  }
+
+  return (
+    <div
+      className={dragStart ? "chart-frame dragging" : "chart-frame"}
+      onWheel={handleWheel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+    >
+      <div className="chart-controls" onPointerDown={(event) => event.stopPropagation()}>
+        <button type="button" onClick={() => zoom("in")} aria-label={labels.zoomIn} title={labels.zoomIn}>
+          <ZoomIn size={17} aria-hidden />
+        </button>
+        <button type="button" onClick={() => zoom("out")} aria-label={labels.zoomOut} title={labels.zoomOut}>
+          <ZoomOut size={17} aria-hidden />
+        </button>
+        <button type="button" onClick={resetZoom} aria-label={labels.resetZoom} title={labels.resetZoom}>
+          <RotateCcw size={17} aria-hidden />
+        </button>
+      </div>
+      <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={labels.ariaLabel}>
+        <rect width={WIDTH} height={HEIGHT} rx="8" className="chart-bg" />
+        {priceTicks.map((tick) => (
+          <g key={tick}>
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={yFor(tick)} y2={yFor(tick)} className="grid-line" />
+            <text x={WIDTH - PADDING.right + 10} y={yFor(tick) + 4} className="axis-text">
+              {formatCurrency(tick)}
+            </text>
           </g>
-        );
-      })}
-    </svg>
+        ))}
+        {timeLabels.map((label) => (
+          <text key={label.index} x={xFor(label.index)} y={HEIGHT - 12} textAnchor="middle" className="axis-text">
+            {label.text}
+          </text>
+        ))}
+        {toggles.bollinger && (
+          <>
+            <path d={linePath(bands.map((band) => band.upper), xFor, yFor)} className="line band-line" />
+            <path d={linePath(bands.map((band) => band.lower), xFor, yFor)} className="line band-line" />
+          </>
+        )}
+        {toggles.ema && (
+          <>
+            <path d={linePath(ema9, xFor, yFor)} className="line ema-fast" />
+            <path d={linePath(ema21, xFor, yFor)} className="line ema-slow" />
+          </>
+        )}
+        {toggles.vwap && <path d={linePath(vwapValues, xFor, yFor)} className="line vwap-line" />}
+        {visible.map((candle, index) => {
+          const x = xFor(index);
+          const openY = yFor(candle.open);
+          const closeY = yFor(candle.close);
+          const highY = yFor(candle.high);
+          const lowY = yFor(candle.low);
+          const isUp = candle.close >= candle.open;
+          const bodyTop = Math.min(openY, closeY);
+          const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+
+          return (
+            <g key={`${candle.timestamp}-${index}`} className={isUp ? "candle up" : "candle down"}>
+              <line x1={x} x2={x} y1={highY} y2={lowY} />
+              <rect x={x - candleWidth / 2} y={bodyTop} width={candleWidth} height={bodyHeight} rx="1.5" />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -144,4 +224,8 @@ function buildTimeLabels(candles: Candle[], locale: AppLocale): Array<{ index: n
       }).format(date)
     };
   });
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
