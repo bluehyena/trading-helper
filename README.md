@@ -1,5 +1,7 @@
 # Trading Helper
 
+[![CI](https://github.com/bluehyena/trading-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/bluehyena/trading-helper/actions/workflows/ci.yml)
+
 [한국어 README](./README.ko.md)
 
 Trading Helper is a local, open-source dashboard for short-term U.S. equity analysis. It combines delayed/best-effort public market data, technical indicators, a rule-based long/short/neutral signal engine, and optional BYOK AI explanations through OpenAI or Gemini.
@@ -21,12 +23,32 @@ Trading Helper is for education and analysis support only. It does not provide p
 
 ## Quick Start
 
+### Requirements
+
+- Node.js 24 or newer
+- npm 11 or newer
+- Git, if you want to clone the repository instead of downloading ZIP
+
 ```bash
+git clone https://github.com/bluehyena/trading-helper.git
+cd trading-helper
 npm install
 npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+### Download Without Git
+
+1. Open `https://github.com/bluehyena/trading-helper`.
+2. Click `Code`.
+3. Click `Download ZIP`.
+4. Unzip the file, open a terminal in the extracted folder, then run:
+
+```bash
+npm install
+npm run dev
+```
 
 Optional AI and market data keys:
 
@@ -44,11 +66,19 @@ MARKET_DATA_PROVIDER=yahoo
 ALPHA_VANTAGE_API_KEY=
 ```
 
+### Production Run
+
+```bash
+npm run build
+npm start
+```
+
 ## Scripts
 
 ```bash
 npm run dev
 npm run build
+npm start
 npm run lint
 npm run typecheck
 npm run test

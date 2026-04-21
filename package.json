@@ -4,6 +4,14 @@
   "private": true,
   "description": "Local AI-assisted stock analysis dashboard for short-term U.S. equity traders.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluehyena/trading-helper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bluehyena/trading-helper/issues"
+  },
+  "homepage": "https://github.com/bluehyena/trading-helper#readme",
   "packageManager": "npm@11.6.2",
   "workspaces": [
     "apps/*",
@@ -12,6 +20,7 @@
   "scripts": {
     "dev": "npm run dev -w @trading-helper/web",
     "build": "npm run build -w @trading-helper/web",
+    "start": "npm run start -w @trading-helper/web",
     "lint": "npm run lint --workspaces --if-present",
     "test": "vitest run",
     "test:e2e": "playwright test",
