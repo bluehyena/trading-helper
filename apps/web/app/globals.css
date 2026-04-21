@@ -272,6 +272,13 @@ button:disabled {
   font-weight: 700;
 }
 
+.symbol-row .current-price {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .symbol-row .positive,
 .positive {
   color: var(--teal);

@@ -8,16 +8,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   });
   await page.route("**/api/market/quote**", async (route) => {
     await route.fulfill({
-      json: {
-        symbol: "AAPL",
-        name: "Apple Inc.",
-        price: 202.12,
-        change: 1.1,
-        changePercent: 0.55,
-        marketState: "REGULAR",
-        source: "fixture",
-        timestamp: new Date().toISOString()
-      }
+      status: 502,
+      json: { error: "Quote unavailable in fixture." }
     });
   });
   await page.route("**/api/market/fx", async (route) => {
@@ -48,14 +40,14 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
 
   await expect(page.getByRole("heading", { name: "Trading Helper" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "AAPL" })).toBeVisible();
-  await expect(page.getByText("₩282,968")).toBeVisible();
+  await expect(page.getByText("₩282,590")).toBeVisible();
   await expect(page.getByText("롱 우위")).toBeVisible();
   await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
   await expect(page.getByRole("button", { name: "확대" })).toBeVisible();
   await expect(page.getByRole("button", { name: "축소" })).toBeVisible();
 
   await page.getByRole("button", { name: "English" }).click();
-  await expect(page.getByText("$202.12")).toBeVisible();
+  await expect(page.getByText("$201.85")).toBeVisible();
   await expect(page.getByText("Long bias")).toBeVisible();
   await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();

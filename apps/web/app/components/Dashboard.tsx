@@ -81,6 +81,10 @@ export function Dashboard() {
     return () => window.clearTimeout(handle);
   }, [query]);
 
+  const latestCandle = payload?.candles.at(-1) ?? null;
+  const displayPriceUsd = quote?.price ?? latestCandle?.close ?? null;
+  const displayPriceTimestamp = quote?.timestamp ?? latestCandle?.time ?? null;
+
   const marketContext: MarketContext | null = useMemo(() => {
     if (!payload?.signal) {
       return null;
@@ -88,18 +92,18 @@ export function Dashboard() {
 
     return {
       symbol,
-      quote: quote
+      quote: displayPriceUsd !== null && displayPriceTimestamp
         ? {
-            price: quote.price,
-            change: quote.change,
-            changePercent: quote.changePercent,
-            marketState: quote.marketState,
-            timestamp: quote.timestamp
+            price: displayPriceUsd,
+            change: quote?.change ?? 0,
+            changePercent: quote?.changePercent ?? 0,
+            marketState: quote?.marketState,
+            timestamp: displayPriceTimestamp
           }
         : undefined,
       signal: payload.signal
     };
-  }, [payload, quote, symbol]);
+  }, [displayPriceTimestamp, displayPriceUsd, payload, quote, symbol]);
 
   async function loadMarket(nextSymbol: string, nextTimeframe: Timeframe, nextLocale: AppLocale) {
     setIsLoading(true);
@@ -212,12 +216,16 @@ export function Dashboard() {
               <p className="eyebrow">{payload?.source ?? "Market data"}</p>
               <div className="symbol-row">
                 <h2>{symbol}</h2>
-                {quote && (
+                {displayPriceUsd !== null && (
                   <>
-                    <span title={priceTitle(quote, fxRate, locale)}>{formatDisplayPrice(quote.price, fxRate, locale)}</span>
-                    <span className={quote.changePercent >= 0 ? "positive" : "negative"}>
-                      {formatPercent(quote.changePercent)}
+                    <span className="current-price" title={priceTitle(displayPriceUsd, fxRate, locale)}>
+                      {formatDisplayPrice(displayPriceUsd, fxRate, locale)}
                     </span>
+                    {quote && (
+                      <span className={quote.changePercent >= 0 ? "positive" : "negative"}>
+                        {formatPercent(quote.changePercent)}
+                      </span>
+                    )}
                   </>
                 )}
               </div>
@@ -288,12 +296,12 @@ function formatDisplayPrice(priceUsd: number, fxRate: FxRate | null, locale: App
   return formatCurrency(priceUsd);
 }
 
-function priceTitle(quote: Quote, fxRate: FxRate | null, locale: AppLocale): string {
+function priceTitle(priceUsd: number, fxRate: FxRate | null, locale: AppLocale): string {
   if (locale === "ko" && fxRate) {
-    return `${formatCurrency(quote.price)} x ${fxRate.pair} ${fxRate.rate.toFixed(2)} (${fxRate.source})`;
+    return `${formatCurrency(priceUsd)} x ${fxRate.pair} ${fxRate.rate.toFixed(2)} (${fxRate.source})`;
   }
 
-  return `${formatCurrency(quote.price)} USD`;
+  return `${formatCurrency(priceUsd)} USD`;
 }
 
 function Toggle({
