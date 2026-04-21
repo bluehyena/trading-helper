@@ -1,0 +1,30 @@
+{
+  "name": "trading-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local AI-assisted stock analysis dashboard for short-term U.S. equity traders.",
+  "license": "MIT",
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @trading-helper/web",
+    "build": "npm run build -w @trading-helper/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.2.4",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}
