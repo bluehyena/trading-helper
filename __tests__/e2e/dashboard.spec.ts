@@ -54,6 +54,17 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
                 description: { ko: "반전 후보", en: "Reversal candidate" }
               }
             ],
+            chartPatterns: [
+              {
+                id: "bull_flag",
+                direction: "BULLISH",
+                strength: "MEDIUM",
+                label: { ko: "불 플래그", en: "Bull Flag" },
+                description: { ko: "상승 지속 후보", en: "Bullish continuation candidate" },
+                levels: [{ label: { ko: "플래그 상단", en: "Flag high" }, price: 204 }],
+                points: []
+              }
+            ],
             rankReasons: [],
             signal: makeCandlePayload().signal
           }
@@ -92,6 +103,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await page.getByRole("button", { name: "즐겨찾기 스캔" }).click();
   await expect(page.getByText("점수 91.4")).toBeVisible();
   await expect(page.getByText("패턴: 상승 장악형")).toBeVisible();
+  await expect(page.getByText("차트형태: 불 플래그")).toBeVisible();
 
   await page.getByRole("button", { name: "English" }).click();
   await expect(page.locator(".current-price")).toHaveText("$201.85");
@@ -100,8 +112,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();
   await page.getByRole("link", { name: "Learn" }).click();
-  await expect(page.getByRole("heading", { name: "Indicator Guide" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Indicator & Chart Pattern Guide" })).toBeVisible();
   await expect(page.getByText("Heikin-Ashi")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Dashboard" }).click();
 
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");
@@ -150,6 +163,17 @@ function makeCandlePayload() {
           strength: "HIGH",
           label: { ko: "상승 장악형", en: "Bullish Engulfing" },
           description: { ko: "반전 후보", en: "Reversal candidate" }
+        }
+      ],
+      chartPatterns: [
+        {
+          id: "bull_flag",
+          direction: "BULLISH",
+          strength: "MEDIUM",
+          label: { ko: "불 플래그", en: "Bull Flag" },
+          description: { ko: "상승 지속 후보", en: "Bullish continuation candidate" },
+          levels: [{ label: { ko: "플래그 상단", en: "Flag high" }, price: 204 }],
+          points: []
         }
       ],
       indicators: {
