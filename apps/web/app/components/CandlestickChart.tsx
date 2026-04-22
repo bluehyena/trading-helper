@@ -1,6 +1,15 @@
 "use client";
 
-import { bollingerBands, ema, type AppLocale, type Candle, vwap } from "@trading-helper/core";
+import {
+  bollingerBands,
+  ema,
+  toHeikinAshi,
+  type AppLocale,
+  type Candle,
+  type CandleStyle,
+  type SignalResult,
+  vwap
+} from "@trading-helper/core";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { useState, type PointerEvent, type WheelEvent } from "react";
 import { formatCurrency } from "../lib/format";
@@ -14,19 +23,25 @@ export interface IndicatorToggles {
 
 interface CandlestickChartProps {
   candles: Candle[];
+  candleStyle: CandleStyle;
   locale: AppLocale;
   labels: UiMessages["chart"];
+  signal?: SignalResult;
+  showOverlays: boolean;
   toggles: IndicatorToggles;
 }
 
 const WIDTH = 960;
 const HEIGHT = 420;
 const PADDING = { top: 18, right: 72, bottom: 34, left: 18 };
+const PRICE_HEIGHT = 318;
+const VOLUME_TOP = 340;
+const VOLUME_HEIGHT = 48;
 const DEFAULT_VISIBLE_COUNT = 140;
 const MIN_VISIBLE_COUNT = 24;
 const ZOOM_STEP = 0.16;
 
-export function CandlestickChart({ candles, locale, labels, toggles }: CandlestickChartProps) {
+export function CandlestickChart({ candles, candleStyle, locale, labels, signal, showOverlays, toggles }: CandlestickChartProps) {
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
   const [offsetFromEnd, setOffsetFromEnd] = useState(0);
   const [dragStart, setDragStart] = useState<{ x: number; offset: number } | null>(null);
@@ -36,12 +51,15 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
   const boundedOffset = clamp(offsetFromEnd, 0, maxOffset);
   const end = Math.max(0, candles.length - boundedOffset);
   const start = Math.max(0, end - boundedVisibleCount);
-  const visible = candles.slice(start, end);
-  const closeValues = visible.map((candle) => candle.close);
+  const displayCandles = candleStyle === "heikin_ashi" ? toHeikinAshi(candles) : candles;
+  const regularVisible = candles.slice(start, end);
+  const visible = displayCandles.slice(start, end);
+  const closeValues = regularVisible.map((candle) => candle.close);
   const ema9 = ema(closeValues, 9);
   const ema21 = ema(closeValues, 21);
-  const vwapValues = vwap(visible);
+  const vwapValues = vwap(regularVisible);
   const bands = bollingerBands(closeValues);
+  const overlayPrices = showOverlays && signal ? overlayPriceValues(signal) : [];
   const allPrices = visible.flatMap((candle, index) => [
     candle.high,
     candle.low,
@@ -50,7 +68,7 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
     toggles.vwap ? vwapValues[index] : null,
     toggles.bollinger ? bands[index]?.upper : null,
     toggles.bollinger ? bands[index]?.lower : null
-  ]);
+  ]).concat(overlayPrices);
   const numericPrices = allPrices.filter((price): price is number => typeof price === "number");
   const min = Math.min(...numericPrices);
   const max = Math.max(...numericPrices);
@@ -66,9 +84,8 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
   const candleWidth = Math.max(3, Math.min(10, xStep * 0.58));
 
   const xFor = (index: number) => PADDING.left + index * xStep;
-  const yFor = (price: number) =>
-    PADDING.top +
-    ((yMax - price) / (yMax - yMin)) * (HEIGHT - PADDING.top - PADDING.bottom);
+  const yFor = (price: number) => PADDING.top + ((yMax - price) / (yMax - yMin)) * PRICE_HEIGHT;
+  const maxVolume = Math.max(...regularVisible.map((candle) => candle.volume), 1);
 
   const priceTicks = buildTicks(yMin, yMax, 5);
   const timeLabels = buildTimeLabels(visible, locale);
@@ -167,6 +184,7 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
           </>
         )}
         {toggles.vwap && <path d={linePath(vwapValues, xFor, yFor)} className="line vwap-line" />}
+        {showOverlays && signal && <TradeOverlays signal={signal} yFor={yFor} />}
         {visible.map((candle, index) => {
           const x = xFor(index);
           const openY = yFor(candle.open);
@@ -184,9 +202,82 @@ export function CandlestickChart({ candles, locale, labels, toggles }: Candlesti
             </g>
           );
         })}
+        {regularVisible.map((candle, index) => {
+          const x = xFor(index);
+          const volumeHeight = Math.max(1, (candle.volume / maxVolume) * VOLUME_HEIGHT);
+          const isUp = candle.close >= candle.open;
+          return (
+            <rect
+              key={`volume-${candle.timestamp}-${index}`}
+              className={isUp ? "volume-bar up" : "volume-bar down"}
+              x={x - candleWidth / 2}
+              y={VOLUME_TOP + VOLUME_HEIGHT - volumeHeight}
+              width={candleWidth}
+              height={volumeHeight}
+              rx="1"
+            />
+          );
+        })}
+        <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={VOLUME_TOP} y2={VOLUME_TOP} className="volume-separator" />
       </svg>
     </div>
   );
+}
+
+function TradeOverlays({ signal, yFor }: { signal: SignalResult; yFor: (price: number) => number }) {
+  return (
+    <g className="trade-overlays">
+      {signal.entryZone && (
+        <rect
+          x={PADDING.left}
+          y={yFor(signal.entryZone.high)}
+          width={WIDTH - PADDING.left - PADDING.right}
+          height={Math.max(2, yFor(signal.entryZone.low) - yFor(signal.entryZone.high))}
+          className="entry-zone"
+        />
+      )}
+      {signal.invalidation !== null && (
+        <OverlayLine price={signal.invalidation} yFor={yFor} className="stop-line" label="SL" />
+      )}
+      {signal.targets.map((target) => (
+        <OverlayLine key={target.label} price={target.price} yFor={yFor} className="target-line" label={target.label} />
+      ))}
+    </g>
+  );
+}
+
+function OverlayLine({
+  price,
+  yFor,
+  className,
+  label
+}: {
+  price: number;
+  yFor: (price: number) => number;
+  className: string;
+  label: string;
+}) {
+  const y = yFor(price);
+  return (
+    <g>
+      <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y} y2={y} className={className} />
+      <text x={WIDTH - PADDING.right - 8} y={y - 5} textAnchor="end" className="overlay-label">
+        {label} {formatCurrency(price)}
+      </text>
+    </g>
+  );
+}
+
+function overlayPriceValues(signal: SignalResult): number[] {
+  const values = signal.targets.map((target) => target.price);
+  if (signal.entryZone) {
+    values.push(signal.entryZone.low, signal.entryZone.high);
+  }
+  if (signal.invalidation !== null) {
+    values.push(signal.invalidation);
+  }
+
+  return values;
 }
 
 function linePath(
