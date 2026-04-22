@@ -46,6 +46,9 @@ input {
 
 button {
   cursor: pointer;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 button:disabled {
@@ -72,6 +75,8 @@ button:disabled {
 .chart-toolbar h2 {
   margin: 0;
   letter-spacing: 0;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
 }
 
 .topbar h1 {
@@ -99,7 +104,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .learn-link {
@@ -154,6 +161,7 @@ button:disabled {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .full-width {
@@ -349,6 +357,7 @@ button:disabled {
 .scanner-topline {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -401,6 +410,7 @@ button:disabled {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px;
+  min-width: 0;
 }
 
 .symbol-row h2 {
@@ -462,6 +472,7 @@ button:disabled {
   min-height: 34px;
   padding: 0 10px;
   color: var(--muted);
+  justify-content: center;
 }
 
 .toggle span {
@@ -560,6 +571,12 @@ button:disabled {
   paint-order: stroke;
   stroke: #11110d;
   stroke-width: 3px;
+}
+
+.overlay-label-guide {
+  stroke: rgba(243, 240, 232, 0.34);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
 }
 
 .pattern-polyline {
@@ -952,6 +969,8 @@ dd {
 
 .learn-card h2 {
   margin: 10px 0 8px;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .learn-card p {

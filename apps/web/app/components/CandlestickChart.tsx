@@ -38,6 +38,12 @@ interface HoverState {
   candle: Candle;
 }
 
+interface PositionedLabel {
+  id: string;
+  lineY: number;
+  labelY: number;
+}
+
 const WIDTH = 960;
 const HEIGHT = 420;
 const PADDING = { top: 18, right: 72, bottom: 34, left: 18 };
@@ -293,6 +299,30 @@ function TradeOverlays({
   xFor: (index: number) => number;
   yFor: (price: number) => number;
 }) {
+  const tradeLines = layoutLabelPositions(
+    [
+      ...(signal.invalidation !== null
+        ? [
+            {
+              id: "stop",
+              y: yFor(signal.invalidation),
+              className: "stop-line",
+              label: `SL ${formatCurrency(signal.invalidation)}`
+            }
+          ]
+        : []),
+      ...signal.targets.map((target) => ({
+        id: target.label,
+        y: yFor(target.price),
+        className: "target-line",
+        label: `${target.label} ${formatCurrency(target.price)}`
+      }))
+    ],
+    PADDING.top + 16,
+    VOLUME_TOP - 10,
+    18
+  );
+
   return (
     <g className="trade-overlays">
       <ChartPatternOverlays locale={locale} signal={signal} visible={visible} xFor={xFor} yFor={yFor} />
@@ -305,11 +335,14 @@ function TradeOverlays({
           className="entry-zone"
         />
       )}
-      {signal.invalidation !== null && (
-        <OverlayLine price={signal.invalidation} yFor={yFor} className="stop-line" label="SL" />
-      )}
-      {signal.targets.map((target) => (
-        <OverlayLine key={target.label} price={target.price} yFor={yFor} className="target-line" label={target.label} />
+      {tradeLines.map((line) => (
+        <OverlayLine
+          key={line.id}
+          className={line.className}
+          label={line.label}
+          labelY={line.labelY}
+          lineY={line.y}
+        />
       ))}
     </g>
   );
@@ -329,10 +362,23 @@ function ChartPatternOverlays({
   yFor: (price: number) => number;
 }) {
   const timestampToIndex = new Map(visible.map((candle, index) => [candle.timestamp, index]));
+  const visiblePatterns = signal.chartPatterns.slice(0, 2);
+  const levelLabels = layoutLabelPositions(
+    visiblePatterns.flatMap((pattern) =>
+      pattern.levels.slice(0, 2).map((chartLevel) => ({
+        id: `${pattern.id}-${chartLevel.label.en}`,
+        y: yFor(chartLevel.price),
+        label: `${chartLevel.label[locale]} ${formatCurrency(chartLevel.price)}`
+      }))
+    ),
+    PADDING.top + 16,
+    VOLUME_TOP - 10,
+    18
+  );
 
   return (
     <g className="chart-pattern-overlays">
-      {signal.chartPatterns.slice(0, 2).map((pattern) => {
+      {visiblePatterns.map((pattern) => {
         const visiblePoints = pattern.points
           .map((point) => {
             const index = timestampToIndex.get(point.timestamp);
@@ -345,10 +391,20 @@ function ChartPatternOverlays({
             {visiblePoints.length >= 2 && <polyline points={visiblePoints.join(" ")} className="pattern-polyline" />}
             {pattern.levels.slice(0, 2).map((chartLevel) => {
               const y = yFor(chartLevel.price);
+              const label = levelLabels.find((item) => item.id === `${pattern.id}-${chartLevel.label.en}`);
               return (
                 <g key={`${pattern.id}-${chartLevel.label.en}`}>
                   <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y} y2={y} className="pattern-level-line" />
-                  <text x={PADDING.left + 8} y={y - 5} className="pattern-label">
+                  {label && Math.abs(label.labelY - (y - 5)) > 1 && (
+                    <line
+                      x1={PADDING.left + 5}
+                      x2={PADDING.left + 5}
+                      y1={y}
+                      y2={label.labelY + 3}
+                      className="overlay-label-guide"
+                    />
+                  )}
+                  <text x={PADDING.left + 8} y={label?.labelY ?? y - 5} className="pattern-label">
                     {chartLevel.label[locale]} {formatCurrency(chartLevel.price)}
                   </text>
                 </g>
@@ -362,22 +418,30 @@ function ChartPatternOverlays({
 }
 
 function OverlayLine({
-  price,
-  yFor,
   className,
-  label
+  label,
+  labelY,
+  lineY
 }: {
-  price: number;
-  yFor: (price: number) => number;
   className: string;
   label: string;
+  labelY: number;
+  lineY: number;
 }) {
-  const y = yFor(price);
   return (
     <g>
-      <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y} y2={y} className={className} />
-      <text x={WIDTH - PADDING.right - 8} y={y - 5} textAnchor="end" className="overlay-label">
-        {label} {formatCurrency(price)}
+      <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lineY} y2={lineY} className={className} />
+      {Math.abs(labelY - (lineY - 5)) > 1 && (
+        <line
+          x1={WIDTH - PADDING.right - 4}
+          x2={WIDTH - PADDING.right - 4}
+          y1={lineY}
+          y2={labelY + 3}
+          className="overlay-label-guide"
+        />
+      )}
+      <text x={WIDTH - PADDING.right - 8} y={labelY} textAnchor="end" className="overlay-label">
+        {label}
       </text>
     </g>
   );
@@ -434,6 +498,50 @@ function buildTimeLabels(candles: Candle[], locale: AppLocale): Array<{ index: n
       }).format(date)
     };
   });
+}
+
+function layoutLabelPositions<T extends { id: string; y: number }>(
+  labels: T[],
+  minY: number,
+  maxY: number,
+  gap: number
+): Array<T & PositionedLabel> {
+  if (labels.length === 0) {
+    return [];
+  }
+
+  const sorted = labels
+    .map((label) => ({
+      ...label,
+      lineY: label.y,
+      labelY: clamp(label.y - 5, minY, maxY)
+    }))
+    .sort((left, right) => left.labelY - right.labelY);
+
+  for (let index = 1; index < sorted.length; index += 1) {
+    sorted[index].labelY = Math.max(sorted[index].labelY, sorted[index - 1].labelY + gap);
+  }
+
+  const overflow = sorted.at(-1)!.labelY - maxY;
+  if (overflow > 0) {
+    sorted[sorted.length - 1].labelY = maxY;
+    for (let index = sorted.length - 2; index >= 0; index -= 1) {
+      sorted[index].labelY = Math.min(sorted[index].labelY - overflow, sorted[index + 1].labelY - gap);
+    }
+  }
+
+  if (sorted[0].labelY < minY) {
+    const underflow = minY - sorted[0].labelY;
+    sorted[0].labelY = minY;
+    for (let index = 1; index < sorted.length; index += 1) {
+      sorted[index].labelY = Math.max(sorted[index].labelY + underflow, sorted[index - 1].labelY + gap);
+    }
+  }
+
+  return sorted.map((label) => ({
+    ...label,
+    labelY: clamp(label.labelY, minY, maxY)
+  }));
 }
 
 function formatHoverTime(value: string, locale: AppLocale): string {
