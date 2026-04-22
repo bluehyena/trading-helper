@@ -117,9 +117,11 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("heading", { name: "Indicator & Chart Pattern Guide" })).toBeVisible();
   await expect(page.getByText("Heikin-Ashi")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Head and Shoulders", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Bull Flag", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect(page.getByRole("heading", { name: "Double Top / Bottom" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Double Bottom" })).toBeVisible();
   await page.getByRole("link", { name: "Dashboard" }).click();
 
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");
