@@ -31,13 +31,17 @@ function buildKoreanAnswer(request: AiChatRequest, latestQuestion: string): stri
           signal.invalidation
         }, 목표 후보는 ${signal.targets.map((target) => `${target.label} ${target.price}`).join(", ")}입니다.`;
   const reasons = signal.reasons.map((reason) => `- ${reason}`).join("\n");
+  const chartPatterns =
+    signal.chartPatterns.length > 0
+      ? `\n\n차트 형태:\n${signal.chartPatterns.map((pattern) => `- ${pattern.label.ko}: ${pattern.description.ko}`).join("\n")}`
+      : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\n주문 실행이나 확정적인 매수/매도 지시는 제공하지 않습니다. 아래 내용은 분석 보조입니다."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}\n\n주의:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}${chartPatterns}\n\n주의:\n${warnings}${executionRefusal}`;
 }
 
 function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): string {
@@ -53,13 +57,17 @@ function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): str
           signal.invalidation
         }, and target candidates are ${signal.targets.map((target) => `${target.label} ${target.price}`).join(", ")}.`;
   const reasons = signal.reasons.map((reason) => `- ${reason}`).join("\n");
+  const chartPatterns =
+    signal.chartPatterns.length > 0
+      ? `\n\nChart patterns:\n${signal.chartPatterns.map((pattern) => `- ${pattern.label.en}: ${pattern.description.en}`).join("\n")}`
+      : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\nI cannot execute orders or give a certain buy/sell instruction. This is analysis-only context."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}\n\nWarnings:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}${chartPatterns}\n\nWarnings:\n${warnings}${executionRefusal}`;
 }
 
 function toKoreanBias(bias: string): string {
