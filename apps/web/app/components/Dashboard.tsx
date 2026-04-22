@@ -19,6 +19,7 @@ import { formatCurrency, formatKrw, formatNumber, formatPercent } from "../lib/f
 import { messages } from "../messages";
 import { AiChat } from "./AiChat";
 import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
+import { FlowPanel } from "./FlowPanel";
 import { RiskPanel } from "./RiskPanel";
 import { SignalCard } from "./SignalCard";
 
@@ -446,6 +447,7 @@ export function Dashboard() {
         <section className="side-stack">
           <SignalCard locale={locale} labels={t.signal} signal={payload?.signal ?? null} />
           <RiskPanel labels={t.risk} signal={payload?.signal ?? null} />
+          <FlowPanel candles={payload?.candles ?? []} locale={locale} signal={payload?.signal ?? null} />
         </section>
 
         <AiChat locale={locale} labels={t.ai} marketContext={marketContext} />
