@@ -66,50 +66,90 @@ const indicatorCards = [
     ko: "감수하는 위험 대비 기대 보상입니다. 예: 2R은 위험 1만큼을 걸어 보상 2를 기대한다는 뜻입니다.",
     en: "Expected reward relative to risk. For example, 2R means targeting twice the amount being risked."
   }
-];
+] as const;
 
 const chartPatternCards = [
   {
-    key: "Head and Shoulders",
+    key: "head_shoulders",
+    title: { ko: "헤드앤숄더", en: "Head and Shoulders" },
     ko: "왼쪽 어깨, 더 높은 머리, 오른쪽 어깨가 보이는 반전 구조입니다. 목선 이탈 전까지는 후보로 보고, 이탈 후에는 손절 기준을 명확히 둬야 합니다.",
     en: "A reversal structure with a left shoulder, higher head, and right shoulder. Treat it as a candidate until neckline loss confirms weakness."
   },
   {
-    key: "Inverse Head and Shoulders",
+    key: "inverse_head_shoulders",
+    title: { ko: "역헤드앤숄더", en: "Inverse Head and Shoulders" },
     ko: "왼쪽 어깨, 더 낮은 머리, 오른쪽 어깨가 보이는 상승 반전 구조입니다. 목선 돌파와 거래량 확인이 중요합니다.",
     en: "A bullish reversal structure with a left shoulder, lower head, and right shoulder. Neckline reclaim and volume confirmation matter."
   },
   {
-    key: "Bull / Bear Flag",
-    ko: "강한 한 방향 움직임 뒤 짧은 눌림이나 반등이 생기는 지속형 패턴입니다. 플래그 상단/하단 돌파 여부가 핵심입니다.",
-    en: "A continuation setup after a strong impulse. The important trigger is whether price breaks the flag high or low."
+    key: "bull_flag",
+    title: { ko: "불 플래그", en: "Bull Flag" },
+    ko: "강한 상승 뒤 짧은 눌림이나 횡보가 생기는 상승 지속형 패턴입니다. 플래그 상단 돌파 여부가 핵심입니다.",
+    en: "A bullish continuation setup after a strong upside impulse. The key trigger is whether price breaks the flag high."
   },
   {
-    key: "Pennant",
-    ko: "강한 움직임 뒤 변동폭이 작아지며 수렴하는 형태입니다. 단타에서는 수렴 돌파 방향과 실패 시 빠른 무효화가 중요합니다.",
-    en: "A contracting consolidation after a strong move. Short-term traders watch breakout direction and invalidate quickly if it fails."
+    key: "bear_flag",
+    title: { ko: "베어 플래그", en: "Bear Flag" },
+    ko: "강한 하락 뒤 짧은 반등이나 횡보가 생기는 하락 지속형 패턴입니다. 플래그 하단 이탈 여부가 핵심입니다.",
+    en: "A bearish continuation setup after a strong downside impulse. The key trigger is whether price breaks the flag low."
   },
   {
-    key: "Ascending / Descending Triangle",
-    ko: "상승 삼각수렴은 평평한 저항과 높아지는 저점, 하락 삼각수렴은 평평한 지지와 낮아지는 고점이 특징입니다.",
-    en: "Ascending triangles show flat resistance and rising lows; descending triangles show flat support and falling highs."
+    key: "bullish_pennant",
+    title: { ko: "상승 페넌트", en: "Bullish Pennant" },
+    ko: "강한 상승 뒤 변동폭이 좁아지며 작은 삼각형처럼 수렴하는 상승 지속 후보입니다.",
+    en: "A bullish continuation candidate where price contracts into a small triangle after a strong upside impulse."
   },
   {
-    key: "Symmetrical Triangle",
+    key: "bearish_pennant",
+    title: { ko: "하락 페넌트", en: "Bearish Pennant" },
+    ko: "강한 하락 뒤 변동폭이 좁아지며 작은 삼각형처럼 수렴하는 하락 지속 후보입니다.",
+    en: "A bearish continuation candidate where price contracts into a small triangle after a strong downside impulse."
+  },
+  {
+    key: "ascending_triangle",
+    title: { ko: "상승 삼각수렴", en: "Ascending Triangle" },
+    ko: "비슷한 저항선 아래에서 저점이 계속 높아지는 구조입니다. 저항 돌파와 거래량 확인이 중요합니다.",
+    en: "A setup with flat resistance and rising lows. Resistance breakout and participation are the important checks."
+  },
+  {
+    key: "descending_triangle",
+    title: { ko: "하락 삼각수렴", en: "Descending Triangle" },
+    ko: "비슷한 지지선 위에서 고점이 계속 낮아지는 구조입니다. 지지 이탈 여부가 중요합니다.",
+    en: "A setup with flat support and falling highs. Support breakdown is the important confirmation."
+  },
+  {
+    key: "symmetrical_triangle",
+    title: { ko: "대칭 삼각수렴", en: "Symmetrical Triangle" },
     ko: "고점은 낮아지고 저점은 높아지는 압축 구조입니다. 방향 예측보다 돌파 방향과 거래량 확인이 더 중요합니다.",
     en: "A compression pattern with lower highs and higher lows. Breakout direction and participation matter more than prediction."
   },
   {
-    key: "Rising / Falling Wedge",
-    ko: "가격은 한 방향으로 움직이지만 폭이 좁아지는 구조입니다. 상승 쐐기는 하방 실패, 하락 쐐기는 상방 반전을 조심해서 봅니다.",
-    en: "A narrowing structure while price drifts in one direction. Rising wedges warn of downside failure; falling wedges can hint at upside reversal."
+    key: "rising_wedge",
+    title: { ko: "상승 쐐기", en: "Rising Wedge" },
+    ko: "고점과 저점이 모두 높아지지만 폭이 좁아지는 구조입니다. 하방 이탈 리스크를 봅니다.",
+    en: "Both highs and lows rise while the range narrows. Traders watch for downside failure."
   },
   {
-    key: "Double Top / Bottom",
-    ko: "비슷한 가격에서 두 번 막히거나 방어되는 구조입니다. 중간 저점/고점 돌파가 확인 전환 신호가 됩니다.",
-    en: "Two failures or defenses near the same price. The middle trough or peak is the confirmation level."
+    key: "falling_wedge",
+    title: { ko: "하락 쐐기", en: "Falling Wedge" },
+    ko: "고점과 저점이 모두 낮아지지만 폭이 좁아지는 구조입니다. 상방 돌파 후보를 봅니다.",
+    en: "Both highs and lows fall while the range narrows. Traders watch for upside reversal."
+  },
+  {
+    key: "double_top",
+    title: { ko: "쌍봉", en: "Double Top" },
+    ko: "비슷한 가격에서 두 번 막힌 구조입니다. 중간 저점 이탈이 전환 확인 신호가 됩니다.",
+    en: "Two failures near the same price. The middle trough is the confirmation level."
+  },
+  {
+    key: "double_bottom",
+    title: { ko: "쌍바닥", en: "Double Bottom" },
+    ko: "비슷한 가격에서 두 번 방어된 구조입니다. 중간 고점 돌파가 전환 확인 신호가 됩니다.",
+    en: "Two defenses near the same price. The middle peak is the confirmation level."
   }
-];
+] as const;
+
+type ChartPatternKey = (typeof chartPatternCards)[number]["key"];
 
 export default function LearnPage() {
   const [locale, setLocale] = useState<AppLocale>("ko");
@@ -169,13 +209,68 @@ export default function LearnPage() {
       </section>
       <section className="learn-grid">
         {chartPatternCards.map((card) => (
-          <article key={card.key} className="learn-card">
-            <BookOpen size={20} aria-hidden />
-            <h2>{card.key}</h2>
+          <article key={card.key} className="learn-card pattern-card">
+            <PatternDiagram patternKey={card.key} title={card.title[locale]} />
+            <h2>{card.title[locale]}</h2>
             <p>{isEnglish ? card.en : card.ko}</p>
           </article>
         ))}
       </section>
     </main>
   );
+}
+
+function PatternDiagram({ patternKey, title }: { patternKey: ChartPatternKey; title: string }) {
+  const path = patternPath(patternKey);
+  const guides = patternGuides(patternKey);
+
+  return (
+    <svg className="pattern-diagram" viewBox="0 0 220 118" role="img" aria-label={title}>
+      <rect x="1" y="1" width="218" height="116" rx="8" />
+      {guides.map((guide) => (
+        <line key={guide} x1={guide.split(" ")[0]} y1={guide.split(" ")[1]} x2={guide.split(" ")[2]} y2={guide.split(" ")[3]} />
+      ))}
+      <polyline points={path} />
+    </svg>
+  );
+}
+
+function patternPath(patternKey: ChartPatternKey): string {
+  const paths: Record<ChartPatternKey, string> = {
+    head_shoulders: "15,88 42,58 68,84 103,24 138,84 166,59 205,91",
+    inverse_head_shoulders: "15,30 42,60 68,36 103,96 138,36 166,61 205,27",
+    bull_flag: "18,94 54,34 86,25 99,44 125,37 137,56 164,49 178,68 205,38",
+    bear_flag: "18,24 54,84 86,93 100,74 126,81 140,62 166,69 180,50 205,81",
+    bullish_pennant: "18,94 56,32 88,28 116,46 144,37 116,46 144,55 176,48 204,30",
+    bearish_pennant: "18,24 56,86 88,90 116,72 144,81 116,72 144,63 176,70 204,88",
+    ascending_triangle: "16,90 52,72 88,84 126,58 164,66 204,35",
+    descending_triangle: "16,28 52,47 88,35 126,60 164,51 204,82",
+    symmetrical_triangle: "16,88 52,36 86,78 122,49 158,68 204,54",
+    rising_wedge: "16,92 52,58 88,78 124,45 160,62 204,40",
+    falling_wedge: "16,28 52,62 88,45 124,78 160,61 204,82",
+    double_top: "16,88 48,45 82,83 116,45 152,85 204,96",
+    double_bottom: "16,30 48,75 82,38 116,75 152,35 204,24"
+  };
+
+  return paths[patternKey];
+}
+
+function patternGuides(patternKey: ChartPatternKey): string[] {
+  const guides: Partial<Record<ChartPatternKey, string[]>> = {
+    head_shoulders: ["34 84 176 84"],
+    inverse_head_shoulders: ["34 36 176 36"],
+    bull_flag: ["89 39 178 63", "86 24 175 49"],
+    bear_flag: ["89 79 178 55", "86 94 175 69"],
+    bullish_pennant: ["88 28 176 48", "88 66 176 48"],
+    bearish_pennant: ["88 90 176 70", "88 52 176 70"],
+    ascending_triangle: ["32 34 204 34", "36 91 204 39"],
+    descending_triangle: ["32 82 204 82", "36 28 204 78"],
+    symmetrical_triangle: ["35 34 204 55", "35 90 204 55"],
+    rising_wedge: ["36 58 204 40", "36 96 204 62"],
+    falling_wedge: ["36 62 204 82", "36 26 204 60"],
+    double_top: ["40 45 126 45", "82 83 152 83"],
+    double_bottom: ["40 75 126 75", "82 38 152 38"]
+  };
+
+  return guides[patternKey] ?? [];
 }

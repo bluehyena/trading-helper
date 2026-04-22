@@ -960,6 +960,36 @@ dd {
   line-height: 1.55;
 }
 
+.pattern-card {
+  min-height: 292px;
+}
+
+.pattern-diagram {
+  display: block;
+  width: 100%;
+  aspect-ratio: 220 / 118;
+  margin-bottom: 12px;
+}
+
+.pattern-diagram rect {
+  fill: #11110d;
+  stroke: var(--line);
+}
+
+.pattern-diagram line {
+  stroke: rgba(215, 169, 59, 0.54);
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+}
+
+.pattern-diagram polyline {
+  fill: none;
+  stroke: var(--teal);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 @media (min-width: 1181px) {
   .app-shell {
     display: grid;
