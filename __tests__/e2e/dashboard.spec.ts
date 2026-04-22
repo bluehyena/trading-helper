@@ -125,6 +125,13 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("롱 근거 테스트 응답입니다")).toBeVisible();
+
+  await page.getByRole("button", { name: "MSFT" }).click();
+  await page.getByRole("button", { name: "1h" }).click();
+  await expect(page.getByRole("heading", { name: "MSFT" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "MSFT" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "1h" })).toHaveClass(/active/);
 });
 
 function makeCandlePayload() {

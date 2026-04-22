@@ -1,15 +1,16 @@
 "use client";
 
 import type { MarketContext } from "@trading-helper/ai";
-import type {
-  AppLocale,
-  Candle,
-  CandleStyle,
-  Quote,
-  ScannerResult,
-  SignalResult,
-  SymbolSearchResult,
-  Timeframe
+import {
+  isTimeframe,
+  type AppLocale,
+  type Candle,
+  type CandleStyle,
+  type Quote,
+  type ScannerResult,
+  type SignalResult,
+  type SymbolSearchResult,
+  type Timeframe
 } from "@trading-helper/core";
 import { AlertCircle, BookOpen, RefreshCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +42,8 @@ type ScanRow = ScannerResult | { symbol: string; error: string };
 const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"];
 const timeframes: Timeframe[] = ["1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"];
 const favoritesKey = "trading-helper-favorites";
+const lastSymbolKey = "trading-helper-last-symbol";
+const lastTimeframeKey = "trading-helper-last-timeframe";
 
 export function Dashboard() {
   const [locale, setLocale] = useState<AppLocale>("ko");
@@ -62,6 +65,7 @@ export function Dashboard() {
     vwap: true,
     bollinger: false
   });
+  const [hasRestoredSession, setHasRestoredSession] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const t = messages[locale];
@@ -69,12 +73,25 @@ export function Dashboard() {
   useEffect(() => {
     const savedLocale = window.localStorage.getItem("trading-helper-locale");
     const savedFavorites = readFavorites();
-    if (savedLocale === "ko" || savedLocale === "en") {
-      window.setTimeout(() => setLocale(savedLocale), 0);
-    }
-    if (savedFavorites.length > 0) {
-      window.setTimeout(() => setFavorites(savedFavorites), 0);
-    }
+    const savedSymbol = normalizeStoredSymbol(window.localStorage.getItem(lastSymbolKey));
+    const savedTimeframe = window.localStorage.getItem(lastTimeframeKey);
+
+    window.setTimeout(() => {
+      if (savedLocale === "ko" || savedLocale === "en") {
+        setLocale(savedLocale);
+      }
+      if (savedFavorites.length > 0) {
+        setFavorites(savedFavorites);
+      }
+      if (savedSymbol) {
+        setSymbol(savedSymbol);
+        setQuery(savedSymbol);
+      }
+      if (isTimeframe(savedTimeframe)) {
+        setTimeframe(savedTimeframe);
+      }
+      setHasRestoredSession(true);
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -86,8 +103,14 @@ export function Dashboard() {
   }, [favorites]);
 
   useEffect(() => {
+    if (!hasRestoredSession) {
+      return;
+    }
+
+    window.localStorage.setItem(lastSymbolKey, symbol);
+    window.localStorage.setItem(lastTimeframeKey, timeframe);
     void loadMarket(symbol, timeframe, locale);
-  }, [symbol, timeframe, locale]);
+  }, [hasRestoredSession, symbol, timeframe, locale]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -439,6 +462,11 @@ function readFavorites(): string[] {
   } catch {
     return [];
   }
+}
+
+function normalizeStoredSymbol(value: string | null): string | null {
+  const symbol = value?.trim().toUpperCase() ?? "";
+  return /^[A-Z0-9.-]{1,12}$/.test(symbol) ? symbol : null;
 }
 
 function formatDisplayPrice(priceUsd: number, fxRate: FxRate | null, locale: AppLocale): string {
