@@ -1,4 +1,4 @@
-export type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d" | "1w" | "1mo";
+export type Timeframe = "1s" | "5s" | "15s" | "1m" | "5m" | "15m" | "30m" | "1h" | "1d" | "1w" | "1mo";
 
 export type SignalBias = "LONG" | "SHORT" | "NEUTRAL";
 
@@ -39,7 +39,7 @@ export interface SymbolSearchResult {
   symbol: string;
   shortName: string;
   exchange?: string;
-  quoteType?: string;
+  quoteType?: "EQUITY" | "ETF" | string;
 }
 
 export interface Quote {
@@ -69,6 +69,39 @@ export interface MarketDataProvider {
   getQuote(symbol: string): Promise<Quote>;
   getCandles(symbol: string, timeframe: Timeframe): Promise<Candle[]>;
   getMarketStatus(): Promise<MarketStatus>;
+}
+
+export type RealtimeTradeDirection = "BUY" | "SELL" | "NEUTRAL";
+
+export interface RealtimeTrade {
+  symbol: string;
+  price: number;
+  size: number;
+  exchange?: number;
+  conditions?: number[];
+  timestamp: string;
+  direction?: RealtimeTradeDirection;
+}
+
+export interface RealtimeQuote {
+  symbol: string;
+  bidPrice: number | null;
+  bidSize: number | null;
+  askPrice: number | null;
+  askSize: number | null;
+  spread: number | null;
+  timestamp: string;
+}
+
+export type RealtimeProviderEvent =
+  | { type: "status"; status: "connecting" | "connected" | "authenticated" | "subscribed" | "closed"; message: string }
+  | { type: "trade"; trade: RealtimeTrade }
+  | { type: "quote"; quote: RealtimeQuote }
+  | { type: "error"; message: string };
+
+export interface RealtimeMarketDataProvider {
+  readonly source: string;
+  streamTradesAndQuotes(symbol: string): AsyncIterable<RealtimeProviderEvent>;
 }
 
 export interface IndicatorSnapshot {

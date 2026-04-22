@@ -3,10 +3,15 @@
 import type { MarketContext } from "@trading-helper/ai";
 import {
   isTimeframe,
+  isRealtimeTimeframe,
+  realtimeRollingLimit,
+  upsertRollingCandle,
   type AppLocale,
   type Candle,
   type CandleStyle,
   type Quote,
+  type RealtimeQuote,
+  type RealtimeTrade,
   type ScannerResult,
   type SignalResult,
   type SymbolSearchResult,
@@ -22,6 +27,7 @@ import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
 import { FlowPanel } from "./FlowPanel";
 import { RiskPanel } from "./RiskPanel";
 import { SignalCard } from "./SignalCard";
+import { TimeSalesPanel } from "./TimeSalesPanel";
 
 interface CandlePayload {
   symbol: string;
@@ -38,10 +44,16 @@ interface FxRate {
   source: string;
 }
 
+interface RealtimeStatus {
+  configured: boolean;
+  provider: string;
+  source: string;
+}
+
 type ScanRow = ScannerResult | { symbol: string; error: string };
 
-const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"];
-const timeframes: Timeframe[] = ["1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"];
+const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", "SPY", "QQQ", "VOO"];
+const timeframes: Timeframe[] = ["1s", "5s", "15s", "1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"];
 const favoritesKey = "trading-helper-favorites";
 const lastSymbolKey = "trading-helper-last-symbol";
 const lastTimeframeKey = "trading-helper-last-timeframe";
@@ -54,6 +66,11 @@ export function Dashboard() {
   const [payload, setPayload] = useState<CandlePayload | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fxRate, setFxRate] = useState<FxRate | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus | null>(null);
+  const [realtimeSource, setRealtimeSource] = useState<string | null>(null);
+  const [realtimeQuote, setRealtimeQuote] = useState<RealtimeQuote | null>(null);
+  const [recentTrades, setRecentTrades] = useState<RealtimeTrade[]>([]);
+  const [realtimeNonce, setRealtimeNonce] = useState(0);
   const [searchResults, setSearchResults] = useState<SymbolSearchResult[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(defaultFavorites);
@@ -70,6 +87,7 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const t = messages[locale];
+  const isRealtime = isRealtimeTimeframe(timeframe);
 
   useEffect(() => {
     const savedLocale = window.localStorage.getItem("trading-helper-locale");
@@ -100,6 +118,19 @@ export function Dashboard() {
   }, [locale]);
 
   useEffect(() => {
+    fetch("/api/market/realtime/status")
+      .then((response) => response.json())
+      .then((status: RealtimeStatus) => setRealtimeStatus(status))
+      .catch(() =>
+        setRealtimeStatus({
+          configured: false,
+          provider: "polygon",
+          source: "Realtime provider status unavailable."
+        })
+      );
+  }, []);
+
+  useEffect(() => {
     window.localStorage.setItem(favoritesKey, JSON.stringify(favorites));
   }, [favorites]);
 
@@ -112,6 +143,95 @@ export function Dashboard() {
     window.localStorage.setItem(lastTimeframeKey, timeframe);
     void loadMarket(symbol, timeframe, locale);
   }, [hasRestoredSession, symbol, timeframe, locale]);
+
+  useEffect(() => {
+    if (!isRealtime || realtimeStatus?.configured !== false) {
+      return;
+    }
+
+    window.setTimeout(() => setTimeframe("5m"), 0);
+  }, [isRealtime, realtimeStatus?.configured]);
+
+  useEffect(() => {
+    if (!hasRestoredSession || !isRealtimeTimeframe(timeframe)) {
+      return;
+    }
+
+    if (realtimeStatus?.configured === false) {
+      window.setTimeout(() => {
+        setIsLoading(false);
+        setError(messages[locale].errors.realtimeKey);
+      }, 0);
+      return;
+    }
+
+    const resetHandle = window.setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+      setPayload(null);
+      setRecentTrades([]);
+      setRealtimeQuote(null);
+    }, 0);
+
+    const events = new EventSource(
+      `/api/market/realtime/stream?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&locale=${locale}&nonce=${realtimeNonce}`
+    );
+    let receivedSignal = false;
+
+    events.addEventListener("status", (event) => {
+      const data = JSON.parse((event as MessageEvent<string>).data) as { source?: string; message?: string };
+      if (data.source) {
+        setRealtimeSource(data.source);
+      }
+    });
+    events.addEventListener("quote", (event) => {
+      setRealtimeQuote(JSON.parse((event as MessageEvent<string>).data) as RealtimeQuote);
+    });
+    events.addEventListener("trade", (event) => {
+      const trade = JSON.parse((event as MessageEvent<string>).data) as RealtimeTrade;
+      setRecentTrades((current) => [trade, ...current].slice(0, 40));
+    });
+    events.addEventListener("candle", (event) => {
+      const candle = JSON.parse((event as MessageEvent<string>).data) as Candle;
+      setPayload((current) => {
+        if (!current) {
+          return current;
+        }
+        return {
+          ...current,
+          candles: upsertRollingCandle(current.candles, candle, realtimeRollingLimit(timeframe))
+        };
+      });
+    });
+    events.addEventListener("signal", (event) => {
+      receivedSignal = true;
+      setPayload(JSON.parse((event as MessageEvent<string>).data) as CandlePayload);
+      setIsLoading(false);
+    });
+    events.addEventListener("error", (event) => {
+      const raw = (event as MessageEvent<string>).data;
+      if (!raw) {
+        return;
+      }
+      const data = JSON.parse(raw) as { message?: string };
+      setError(data.message ?? messages[locale].errors.realtime);
+      setIsLoading(false);
+    });
+    events.onerror = () => {
+      if (receivedSignal) {
+        events.close();
+        return;
+      }
+      setError(messages[locale].errors.realtime);
+      setIsLoading(false);
+      events.close();
+    };
+
+    return () => {
+      window.clearTimeout(resetHandle);
+      events.close();
+    };
+  }, [hasRestoredSession, isRealtime, locale, realtimeNonce, realtimeStatus?.configured, symbol, timeframe]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -132,8 +252,9 @@ export function Dashboard() {
   }, [query]);
 
   const latestCandle = payload?.candles.at(-1) ?? null;
-  const displayPriceUsd = quote?.price ?? latestCandle?.close ?? null;
-  const displayPriceTimestamp = quote?.timestamp ?? latestCandle?.time ?? null;
+  const latestRealtimeTrade = recentTrades[0] ?? null;
+  const displayPriceUsd = latestRealtimeTrade?.price ?? quote?.price ?? latestCandle?.close ?? null;
+  const displayPriceTimestamp = latestRealtimeTrade?.timestamp ?? quote?.timestamp ?? latestCandle?.time ?? null;
   const isFavorite = favorites.includes(symbol);
 
   const marketContext: MarketContext | null = useMemo(() => {
@@ -153,15 +274,61 @@ export function Dashboard() {
               timestamp: displayPriceTimestamp
             }
           : undefined,
-      signal: payload.signal
+      signal: payload.signal,
+      realtime: isRealtime
+        ? {
+            enabled: true,
+            timeframe,
+            source: realtimeSource ?? realtimeStatus?.source,
+            bidPrice: realtimeQuote?.bidPrice,
+            askPrice: realtimeQuote?.askPrice,
+            spread: realtimeQuote?.spread,
+            lastTradePrice: latestRealtimeTrade?.price,
+            lastTradeSize: latestRealtimeTrade?.size,
+            lastTradeDirection: latestRealtimeTrade?.direction,
+            recentTradeCount: recentTrades.length,
+            warning:
+              locale === "en"
+                ? "Second-level candles are noisy short-term observation data."
+                : "초단위 캔들은 노이즈가 큰 초단기 관찰 자료입니다."
+          }
+        : undefined
     };
-  }, [displayPriceTimestamp, displayPriceUsd, payload, quote, symbol]);
+  }, [
+    displayPriceTimestamp,
+    displayPriceUsd,
+    isRealtime,
+    latestRealtimeTrade,
+    locale,
+    payload,
+    quote,
+    recentTrades.length,
+    realtimeQuote,
+    realtimeSource,
+    realtimeStatus?.source,
+    symbol,
+    timeframe
+  ]);
 
   async function loadMarket(nextSymbol: string, nextTimeframe: Timeframe, nextLocale: AppLocale) {
     setIsLoading(true);
     setError(null);
 
     try {
+      if (isRealtimeTimeframe(nextTimeframe)) {
+        const [quoteResponse, fxResponse] = await Promise.all([
+          fetch(`/api/market/quote?symbol=${encodeURIComponent(nextSymbol)}`),
+          fetch("/api/market/fx")
+        ]);
+        const quoteJson = (await quoteResponse.json()) as Quote | { error: string };
+        const fxJson = (await fxResponse.json()) as FxRate | { error: string };
+
+        setPayload(null);
+        setQuote("error" in quoteJson ? null : quoteJson);
+        setFxRate("error" in fxJson ? null : fxJson);
+        return;
+      }
+
       const [candlesResponse, quoteResponse, fxResponse] = await Promise.all([
         fetch(
           `/api/market/candles?symbol=${encodeURIComponent(nextSymbol)}&timeframe=${nextTimeframe}&locale=${nextLocale}`
@@ -184,7 +351,9 @@ export function Dashboard() {
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : messages[nextLocale].errors.market);
     } finally {
-      setIsLoading(false);
+      if (!isRealtimeTimeframe(nextTimeframe)) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -194,7 +363,7 @@ export function Dashboard() {
       const response = await fetch("/api/market/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols: favorites, timeframe, locale })
+        body: JSON.stringify({ symbols: favorites, timeframe: isRealtimeTimeframe(timeframe) ? "5m" : timeframe, locale })
       });
       const json = (await response.json()) as { results?: ScanRow[] };
       setScanRows(json.results ?? []);
@@ -211,6 +380,8 @@ export function Dashboard() {
 
     setSymbol(normalized);
     setQuery(normalized);
+    setRecentTrades([]);
+    setRealtimeQuote(null);
     setSearchResults([]);
     setIsSearchOpen(false);
   }
@@ -229,6 +400,13 @@ export function Dashboard() {
   function changeLocale(nextLocale: AppLocale) {
     setLocale(nextLocale);
     window.localStorage.setItem("trading-helper-locale", nextLocale);
+  }
+
+  function refreshMarket() {
+    if (isRealtimeTimeframe(timeframe)) {
+      setRealtimeNonce((current) => current + 1);
+    }
+    void loadMarket(symbol, timeframe, locale);
   }
 
   return (
@@ -363,7 +541,7 @@ export function Dashboard() {
         <section className="chart-panel">
           <div className="chart-toolbar">
             <div>
-              <p className="eyebrow">{payload?.source ?? "Market data"}</p>
+              <p className="eyebrow">{isRealtime ? realtimeSource ?? realtimeStatus?.source ?? "Realtime market data" : payload?.source ?? "Market data"}</p>
               <div className="symbol-row">
                 <h2>{symbol}</h2>
                 <button
@@ -391,23 +569,29 @@ export function Dashboard() {
             <button
               className="icon-button"
               type="button"
-              onClick={() => void loadMarket(symbol, timeframe, locale)}
+              onClick={refreshMarket}
               aria-label={t.aria.refresh}
             >
               <RefreshCcw size={18} aria-hidden />
             </button>
           </div>
           <div className="segmented" aria-label={t.aria.timeframe}>
-            {timeframes.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={item === timeframe ? "active" : ""}
-                onClick={() => setTimeframe(item)}
-              >
-                {item}
-              </button>
-            ))}
+            {timeframes.map((item) => {
+              const needsRealtimeKey = isRealtimeTimeframe(item) && realtimeStatus?.configured === false;
+
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  className={item === timeframe ? "active" : ""}
+                  disabled={needsRealtimeKey}
+                  title={needsRealtimeKey ? t.errors.realtimeKey : undefined}
+                  onClick={() => setTimeframe(item)}
+                >
+                  {item}
+                </button>
+              );
+            })}
           </div>
           <div className="toggle-row" aria-label={t.aria.indicators}>
             <Toggle label="EMA" checked={toggles.ema} onChange={() => setToggles({ ...toggles, ema: !toggles.ema })} />
@@ -429,7 +613,7 @@ export function Dashboard() {
             <Toggle label={t.chartControls.overlays} checked={showOverlays} onChange={() => setShowOverlays(!showOverlays)} />
           </div>
           {error && <div className="error-box">{error}</div>}
-          {!error && payload && (
+          {!error && payload && payload.candles.length > 0 && (
             <CandlestickChart
               key={`${symbol}-${timeframe}`}
               candleStyle={candleStyle}
@@ -441,7 +625,8 @@ export function Dashboard() {
               toggles={toggles}
             />
           )}
-          {!error && isLoading && <div className="chart-empty">{t.errors.loading}</div>}
+          {!error && isLoading && <div className="chart-empty">{isRealtime ? t.errors.realtimeWaiting : t.errors.loading}</div>}
+          {isRealtime && <TimeSalesPanel locale={locale} quote={realtimeQuote} trades={recentTrades} />}
         </section>
 
         <section className="side-stack">

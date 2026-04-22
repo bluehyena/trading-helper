@@ -6,6 +6,7 @@ import type {
   SymbolSearchResult,
   Timeframe
 } from "../types";
+import { isRealtimeTimeframe } from "./timeframes";
 
 const ALPHA_VANTAGE_SOURCE =
   "Alpha Vantage API (free limits apply; intraday freshness depends on entitlement)";
@@ -95,6 +96,10 @@ export class AlphaVantageMarketDataProvider implements MarketDataProvider {
   }
 
   async getCandles(symbol: string, timeframe: Timeframe): Promise<Candle[]> {
+    if (isRealtimeTimeframe(timeframe)) {
+      throw new Error(`${timeframe} candles require a configured realtime WebSocket provider.`);
+    }
+
     const normalized = normalizeSymbol(symbol);
     const isDaily = timeframe === "1d";
     const isWeekly = timeframe === "1w";

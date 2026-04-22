@@ -3,8 +3,18 @@ import { expect, test } from "@playwright/test";
 test("loads the dashboard, renders signal, and streams AI explanation", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.route("**/api/market/search**", async (route) => {
+    const url = new URL(route.request().url());
+    const query = url.searchParams.get("q")?.toUpperCase() ?? "";
     await route.fulfill({
-      json: [{ symbol: "AAPL", shortName: "Apple Inc.", exchange: "Nasdaq", quoteType: "EQUITY" }]
+      json:
+        query === "QQQ"
+          ? [{ symbol: "QQQ", shortName: "Invesco QQQ Trust", exchange: "Nasdaq", quoteType: "ETF" }]
+          : [{ symbol: "AAPL", shortName: "Apple Inc.", exchange: "Nasdaq", quoteType: "EQUITY" }]
+    });
+  });
+  await page.route("**/api/market/realtime/status", async (route) => {
+    await route.fulfill({
+      json: { configured: false, provider: "polygon", source: "Realtime provider is not configured." }
     });
   });
   await page.route("**/api/market/quote**", async (route) => {
@@ -95,6 +105,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "축소" })).toBeVisible();
   await expect(page.getByRole("button", { name: "하이킨아시" })).toBeVisible();
   await expect(page.getByRole("button", { name: "타점 표시" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "1s" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "QQQ" })).toBeVisible();
   await expect(page.locator(".signal .pattern-direction.long").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "수급 체크" })).toBeVisible();
   await expect(page.getByText("수요 우세")).toBeVisible();
@@ -109,6 +121,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByText("점수 91.4")).toBeVisible();
   await expect(page.getByText("패턴: 상승 장악형")).toBeVisible();
   await expect(page.getByText("차트형태: 불 플래그")).toBeVisible();
+  await page.getByLabel("종목 검색").fill("QQQ");
+  await page.getByText("Invesco QQQ Trust").click();
+  await expect(page.getByRole("heading", { name: "QQQ" })).toBeVisible();
 
   await page.getByRole("button", { name: "English" }).click();
   await expect(page.locator(".current-price")).toHaveText("$201.85");
@@ -144,7 +159,66 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "1h" })).toHaveClass(/active/);
 });
 
-function makeCandlePayload() {
+test("renders mocked realtime seconds candles and time and sales", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.route("**/api/market/search**", async (route) => {
+    await route.fulfill({
+      json: [{ symbol: "QQQ", shortName: "Invesco QQQ Trust", exchange: "Nasdaq", quoteType: "ETF" }]
+    });
+  });
+  await page.route("**/api/market/realtime/status", async (route) => {
+    await route.fulfill({
+      json: { configured: true, provider: "polygon", source: "Polygon/Massive fixture" }
+    });
+  });
+  await page.route("**/api/market/quote**", async (route) => {
+    await route.fulfill({
+      json: {
+        symbol: "QQQ",
+        name: "Invesco QQQ Trust",
+        price: 500,
+        change: 1,
+        changePercent: 0.2,
+        source: "fixture",
+        timestamp: new Date().toISOString()
+      }
+    });
+  });
+  await page.route("**/api/market/fx", async (route) => {
+    await route.fulfill({
+      json: {
+        pair: "USD/KRW",
+        rate: 1400,
+        timestamp: new Date().toISOString(),
+        source: "fixture"
+      }
+    });
+  });
+  await page.route("**/api/market/candles**", async (route) => {
+    await route.fulfill({ json: makeCandlePayload("QQQ") });
+  });
+  await page.route("**/api/market/realtime/stream**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { "content-type": "text/event-stream; charset=utf-8" },
+      body: makeRealtimeStream()
+    });
+  });
+  await page.route("**/api/ai/status", async (route) => {
+    await route.fulfill({ json: { openai: false, gemini: false, local: true } });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "1s" }).click();
+
+  await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "체결창" })).toBeVisible();
+  await expect(page.getByText("매수호가")).toBeVisible();
+  await expect(page.getByText("매수체결")).toBeVisible();
+  await expect(page.locator(".current-price")).toHaveText("₩700,000");
+});
+
+function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
   const candles = Array.from({ length: 80 }, (_, index) => {
     const timestamp = Date.now() - (80 - index) * 5 * 60_000;
     const close = 190 + index * 0.15;
@@ -160,13 +234,13 @@ function makeCandlePayload() {
   });
 
   return {
-    symbol: "AAPL",
-    timeframe: "5m",
+    symbol,
+    timeframe,
     candles,
     source: "fixture",
     signal: {
-      symbol: "AAPL",
-      timeframe: "5m",
+      symbol,
+      timeframe,
       bias: "LONG",
       confidence: 68,
       entryZone: { low: 201.2, high: 202.4 },
@@ -222,4 +296,28 @@ function makeCandlePayload() {
       source: "fixture"
     }
   };
+}
+
+function makeRealtimeStream() {
+  const payload = makeCandlePayload("QQQ", "1s");
+  const latest = payload.candles.at(-1)!;
+  latest.close = 500;
+  latest.high = 500.05;
+  latest.low = 499.8;
+  latest.open = 499.9;
+  payload.signal.timeframe = "1s";
+  payload.signal.dataTimestamp = latest.time;
+  payload.signal.source = "Polygon/Massive fixture";
+
+  return [
+    sse("status", { source: "Polygon/Massive fixture", message: "subscribed" }),
+    sse("quote", { symbol: "QQQ", bidPrice: 499.9, bidSize: 10, askPrice: 500, askSize: 12, spread: 0.1, timestamp: latest.time }),
+    sse("trade", { symbol: "QQQ", price: 500, size: 100, timestamp: latest.time, direction: "BUY" }),
+    sse("candle", latest),
+    sse("signal", payload)
+  ].join("");
+}
+
+function sse(event: string, data: unknown) {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }

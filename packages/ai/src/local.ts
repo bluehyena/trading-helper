@@ -43,13 +43,16 @@ function buildKoreanAnswer(request: AiChatRequest, latestQuestion: string): stri
     /기관|수급|공매도|잔량|short|interest|13f|ftd/i.test(latestQuestion)
       ? "\n\n수급 참고: 무료 데이터만으로 기관 주문을 실시간 식별할 수는 없습니다. 상대거래량, VWAP, OBV는 참여 강도 프록시이며 FINRA 공매도 거래량, Nasdaq 공매도잔량, SEC 13F/FTD는 지연 공개자료입니다."
       : "";
+  const realtimeNote = request.marketContext.realtime?.enabled
+    ? "\n\n초단기 참고: 현재 컨텍스트에는 초단위 캔들/체결창 자료가 포함되어 있습니다. 노이즈가 큰 관찰 자료이므로 확정 진입 지시가 아니라 상위 시간대와 함께 확인해야 합니다."
+    : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\n주문 실행이나 확정적인 매수/매도 지시는 제공하지 않습니다. 아래 내용은 분석 보조입니다."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}\n\n주의:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}${realtimeNote}\n\n주의:\n${warnings}${executionRefusal}`;
 }
 
 function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): string {
@@ -77,13 +80,16 @@ function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): str
     /기관|수급|공매도|잔량|short|interest|13f|ftd|institution/i.test(latestQuestion)
       ? "\n\nFlow context: free data cannot identify institutional orders in real time. Relative volume, VWAP, and OBV are participation proxies, while FINRA short-sale volume, Nasdaq short interest, and SEC 13F/FTD are delayed public data."
       : "";
+  const realtimeNote = request.marketContext.realtime?.enabled
+    ? "\n\nScalping context: second-level candles and Time & Sales are included. Treat them as noisy observation data, not a certain entry instruction."
+    : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\nI cannot execute orders or give a certain buy/sell instruction. This is analysis-only context."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}\n\nWarnings:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}${realtimeNote}\n\nWarnings:\n${warnings}${executionRefusal}`;
 }
 
 function toKoreanBias(bias: string): string {

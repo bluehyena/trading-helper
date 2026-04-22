@@ -1,4 +1,4 @@
-import type { AppLocale, SignalResult } from "@trading-helper/core";
+import type { AppLocale, RealtimeTradeDirection, SignalResult, Timeframe } from "@trading-helper/core";
 
 export type AiProviderName = "openai" | "gemini" | "local";
 
@@ -17,6 +17,19 @@ export interface MarketContext {
     timestamp: string;
   };
   signal: SignalResult;
+  realtime?: {
+    enabled: boolean;
+    timeframe: Timeframe;
+    source?: string;
+    bidPrice?: number | null;
+    askPrice?: number | null;
+    spread?: number | null;
+    lastTradePrice?: number | null;
+    lastTradeSize?: number | null;
+    lastTradeDirection?: RealtimeTradeDirection;
+    recentTradeCount?: number;
+    warning?: string;
+  };
 }
 
 export interface AiChatRequest {

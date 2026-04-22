@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   analyzeSignal,
   createMarketDataProvider,
+  isRealtimeTimeframe,
   isTimeframe,
   rankScannerResult,
   type AppLocale,
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as ScanRequestBody;
   const symbols = normalizeSymbols(body.symbols ?? []).slice(0, MAX_SYMBOLS);
   const requestedTimeframe = body.timeframe ?? null;
-  const timeframe: Timeframe = isTimeframe(requestedTimeframe) ? requestedTimeframe : "5m";
+  const timeframe: Timeframe = isTimeframe(requestedTimeframe) && !isRealtimeTimeframe(requestedTimeframe) ? requestedTimeframe : "5m";
   const locale: AppLocale = body.locale === "en" ? "en" : "ko";
 
   if (symbols.length === 0) {

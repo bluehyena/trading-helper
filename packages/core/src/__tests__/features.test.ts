@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeSignal,
+  calculateSpread,
   detectChartPatterns,
   detectCandlestickPatterns,
+  estimateTradeDirection,
   isTimeframe,
+  isRealtimeTimeframe,
+  parsePolygonEvents,
+  parseYahooSearchResponse,
   rankScannerResult,
+  RealtimeCandleAggregator,
   timeframeConfig,
   toHeikinAshi,
-  type Candle
+  type Candle,
+  type RealtimeTrade
 } from "../index";
 
 describe("extended market features", () => {
@@ -15,8 +22,70 @@ describe("extended market features", () => {
     expect(isTimeframe("1d")).toBe(true);
     expect(isTimeframe("1w")).toBe(true);
     expect(isTimeframe("1mo")).toBe(true);
+    expect(isTimeframe("1s")).toBe(true);
+    expect(isRealtimeTimeframe("1s")).toBe(true);
+    expect(isRealtimeTimeframe("5m")).toBe(false);
     expect(timeframeConfig["1w"].interval).toBe("1wk");
     expect(timeframeConfig["1mo"].interval).toBe("1mo");
+  });
+
+  it("aggregates realtime trades into second candles and limits the rolling buffer", () => {
+    const aggregator = new RealtimeCandleAggregator("1s");
+    const first = aggregator.updateTrade(trade(100, 10, "2026-04-22T14:30:00.100Z"));
+    const sameBucket = aggregator.updateTrade(trade(101, 7, "2026-04-22T14:30:00.900Z"));
+    const nextBucket = aggregator.updateTrade(trade(99, 5, "2026-04-22T14:30:01.100Z"));
+
+    expect(first.timestamp).toBe(sameBucket.timestamp);
+    expect(sameBucket.open).toBe(100);
+    expect(sameBucket.high).toBe(101);
+    expect(sameBucket.close).toBe(101);
+    expect(sameBucket.volume).toBe(17);
+    expect(nextBucket.timestamp).toBeGreaterThan(sameBucket.timestamp);
+    expect(aggregator.getCandles()).toHaveLength(2);
+  });
+
+  it("calculates spread and estimates trade direction from level 1 quotes", () => {
+    const quote = {
+      symbol: "QQQ",
+      bidPrice: 499.9,
+      bidSize: 5,
+      askPrice: 500,
+      askSize: 7,
+      spread: 0.1,
+      timestamp: "2026-04-22T14:30:00.000Z"
+    };
+
+    expect(calculateSpread(quote)).toBeCloseTo(0.1);
+    expect(estimateTradeDirection(trade(500, 1), quote)).toBe("BUY");
+    expect(estimateTradeDirection(trade(499.9, 1), quote)).toBe("SELL");
+  });
+
+  it("parses Polygon/Massive trade and quote websocket events without leaking keys", () => {
+    const events = parsePolygonEvents(
+      JSON.stringify([
+        { ev: "status", status: "auth_success", message: "authenticated" },
+        { ev: "Q", sym: "QQQ", bp: 499.9, bs: 2, ap: 500, as: 4, t: 1776868200000 },
+        { ev: "T", sym: "QQQ", p: 500, s: 12, t: 1776868200100 }
+      ])
+    );
+
+    expect(events.some((event) => event.type === "status")).toBe(true);
+    expect(events.some((event) => event.type === "quote")).toBe(true);
+    expect(events.some((event) => event.type === "trade")).toBe(true);
+    expect(JSON.stringify(events)).not.toContain("POLYGON_API_KEY");
+  });
+
+  it("keeps ETF symbols from Yahoo search results", () => {
+    const results = parseYahooSearchResponse({
+      quotes: [
+        { symbol: "QQQ", shortname: "Invesco QQQ Trust", quoteType: "ETF", exchDisp: "Nasdaq" },
+        { symbol: "AAPL", shortname: "Apple Inc.", quoteType: "EQUITY", exchDisp: "Nasdaq" },
+        { symbol: "AAPL2501C00100000", shortname: "Option", quoteType: "OPTION", exchDisp: "OPR" }
+      ]
+    });
+
+    expect(results.map((result) => result.symbol)).toEqual(["QQQ", "AAPL"]);
+    expect(results[0].quoteType).toBe("ETF");
   });
 
   it("converts regular candles to Heikin-Ashi candles", () => {
@@ -122,5 +191,14 @@ function candle(open: number, high: number, low: number, close: number): Candle 
     low,
     close,
     volume: 1_000
+  };
+}
+
+function trade(price: number, size: number, timestamp = "2026-04-22T14:30:00.000Z"): RealtimeTrade {
+  return {
+    symbol: "QQQ",
+    price,
+    size,
+    timestamp
   };
 }

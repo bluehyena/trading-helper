@@ -44,7 +44,8 @@ Trading Helper turns free public market data, technical indicators, long/short/n
 
 ## Highlights
 
-- Local web dashboard for U.S. equities: watchlist, symbol search, candlestick chart, signal card, risk panel, and AI chat.
+- Local web dashboard for U.S. equities and U.S.-listed ETFs such as `SPY`, `QQQ`, and `VOO`: watchlist, symbol search, candlestick chart, signal card, risk panel, and AI chat.
+- Optional Polygon/Massive BYOK realtime mode for `1s`, `5s`, and `15s` candles, Time & Sales, and Level 1 bid/ask spread.
 - Local favorites with manual scanner ranking for the best long/short setups in your saved symbols.
 - Scroll-wheel chart zoom, icon zoom controls, and drag panning across recent candles.
 - Daily, weekly, and monthly charts, plus regular and Heikin-Ashi candle display modes.
@@ -106,6 +107,8 @@ GEMINI_API_KEY=
 MARKET_DATA_PROVIDER=yahoo
 # MARKET_DATA_PROVIDER=alpha_vantage
 ALPHA_VANTAGE_API_KEY=
+REALTIME_DATA_PROVIDER=polygon
+POLYGON_API_KEY=
 ```
 
 ### Production Run
@@ -121,7 +124,7 @@ Trading Helper is deliberately analysis-only. The assistant can explain setups, 
 
 ## Learn the Indicators
 
-New to technical indicators and chart structures? Open the built-in `/learn` page after starting the app. It explains every dashboard indicator, regular and Heikin-Ashi candles, trade-plan overlays, candlestick patterns such as hammer/shooting star/engulfing/star patterns, chart structures such as head and shoulders, flags, pennants, triangles, wedges, double tops/bottoms, and delayed public flow data such as FINRA short-sale volume, Nasdaq short interest, SEC 13F, and SEC fails-to-deliver.
+New to technical indicators and chart structures? Open the built-in `/learn` page after starting the app. It explains every dashboard indicator, regular and Heikin-Ashi candles, second-level candles, Time & Sales, bid/ask spread, Level 1 vs Level 2, trade-plan overlays, candlestick patterns such as hammer/shooting star/engulfing/star patterns, chart structures such as head and shoulders, flags, pennants, triangles, wedges, double tops/bottoms, and delayed public flow data such as FINRA short-sale volume, Nasdaq short interest, SEC 13F, and SEC fails-to-deliver.
 
 ## Repository Layout
 
@@ -144,7 +147,7 @@ npm run test:e2e
 
 ## Data Policy
 
-The default provider is no-key public data for accessible local use. Because free data can be delayed, incomplete, rate-limited, or governed by third-party terms, the UI labels the source and timestamp directly. Future provider adapters should preserve the same `MarketDataProvider` interface and expose freshness/source metadata.
+The default provider is no-key public data for accessible local use. Because free data can be delayed, incomplete, rate-limited, or governed by third-party terms, the UI labels the source and timestamp directly. Second-level candles require a user-supplied `POLYGON_API_KEY`; entitlement and realtime/delayed behavior depend on the user's Polygon/Massive plan. Future provider adapters should preserve source/freshness metadata and never expose API keys to the browser.
 
 ## Star History
 

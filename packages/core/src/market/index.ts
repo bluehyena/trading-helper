@@ -1,5 +1,6 @@
 export * from "./alpha-vantage";
 export * from "./candles";
+export * from "./realtime";
 export * from "./timeframes";
 export * from "./yahoo";
 
