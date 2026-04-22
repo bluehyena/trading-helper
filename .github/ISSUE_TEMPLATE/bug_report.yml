@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible problem in Trading Helper.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. Run npm run dev\n2. Open ...\n3. Click ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Node version, browser, data provider"
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I did not include API keys, secrets, or private trading data.
+          required: true

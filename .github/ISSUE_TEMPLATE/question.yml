@@ -1,0 +1,18 @@
+name: Question
+description: Ask a usage or contributor question.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Acknowledgement
+      options:
+        - label: I understand this project is analysis-only and does not provide investment advice.
+          required: true
