@@ -11,6 +11,7 @@ interface TimeSalesPanelProps {
 
 export function TimeSalesPanel({ locale, quote, trades }: TimeSalesPanelProps) {
   const t = copy[locale];
+  const stats = tradeStats(trades);
 
   return (
     <section className="time-sales" aria-label={t.title}>
@@ -31,6 +32,17 @@ export function TimeSalesPanel({ locale, quote, trades }: TimeSalesPanelProps) {
           </span>
         </div>
       </div>
+      <div className="tape-summary">
+        <span>
+          {t.count} <b>{formatNumber(stats.count, 0)}</b>
+        </span>
+        <span>
+          {t.buyVolume} <b>{formatNumber(stats.buyVolume, 0)}</b>
+        </span>
+        <span>
+          {t.sellVolume} <b>{formatNumber(stats.sellVolume, 0)}</b>
+        </span>
+      </div>
       <div className="tape-list">
         {trades.length === 0 ? (
           <p className="helper-text">{t.empty}</p>
@@ -46,6 +58,21 @@ export function TimeSalesPanel({ locale, quote, trades }: TimeSalesPanelProps) {
         )}
       </div>
     </section>
+  );
+}
+
+function tradeStats(trades: RealtimeTrade[]) {
+  return trades.slice(0, 20).reduce(
+    (stats, trade) => {
+      stats.count += 1;
+      if (trade.direction === "BUY") {
+        stats.buyVolume += trade.size;
+      } else if (trade.direction === "SELL") {
+        stats.sellVolume += trade.size;
+      }
+      return stats;
+    },
+    { count: 0, buyVolume: 0, sellVolume: 0 }
   );
 }
 
@@ -71,6 +98,9 @@ const copy = {
     bid: "매수호가",
     ask: "매도호가",
     spread: "스프레드",
+    count: "최근 체결",
+    buyVolume: "매수체결량",
+    sellVolume: "매도체결량",
     empty: "실시간 체결을 기다리는 중입니다."
   },
   en: {
@@ -78,6 +108,9 @@ const copy = {
     bid: "Bid",
     ask: "Ask",
     spread: "Spread",
+    count: "Recent trades",
+    buyVolume: "Ask-hit volume",
+    sellVolume: "Bid-hit volume",
     empty: "Waiting for realtime trades."
   }
 } as const;

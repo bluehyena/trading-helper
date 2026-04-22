@@ -294,6 +294,31 @@ button:disabled {
   white-space: nowrap;
 }
 
+.search-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.search-result-meta .result-name {
+  min-width: 0;
+}
+
+.asset-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  border: 1px solid rgba(215, 169, 59, 0.35);
+  border-radius: 999px;
+  padding: 0 6px;
+  color: var(--amber);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .watchlist {
   display: flex;
   flex-wrap: wrap;
@@ -488,6 +513,47 @@ button:disabled {
 
 .toggle.active span {
   background: var(--teal);
+}
+
+.realtime-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.realtime-status span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.realtime-status.ready {
+  border-color: rgba(79, 185, 159, 0.42);
+  background: rgba(79, 185, 159, 0.1);
+  color: #bdf6e8;
+}
+
+.realtime-status.ready span {
+  background: var(--teal);
+}
+
+.realtime-status.missing {
+  border-color: rgba(215, 169, 59, 0.35);
+  background: rgba(215, 169, 59, 0.09);
+  color: #ead08a;
+}
+
+.realtime-status.missing span {
+  background: var(--amber);
 }
 
 .chart-frame {
@@ -738,6 +804,28 @@ button:disabled {
 
 .quote-strip b {
   color: var(--text);
+}
+
+.tape-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tape-summary span {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.tape-summary b {
+  color: var(--text);
+  font-size: 13px;
 }
 
 .tape-list {
@@ -1490,6 +1578,12 @@ dd {
     font-size: 12px;
   }
 
+  .realtime-status {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
   .chart-frame {
     min-height: 0;
     height: 100%;
@@ -1507,6 +1601,19 @@ dd {
 
   .time-sales h3 {
     font-size: 14px;
+  }
+
+  .tape-summary {
+    gap: 5px;
+  }
+
+  .tape-summary span {
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .tape-summary b {
+    font-size: 12px;
   }
 
   .tape-list {
