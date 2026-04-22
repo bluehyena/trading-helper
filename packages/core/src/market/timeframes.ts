@@ -12,7 +12,9 @@ export const timeframeConfig: Record<Timeframe, TimeframeConfig> = {
   "15m": { interval: "15m", range: "5d", staleAfterMinutes: 45 },
   "30m": { interval: "30m", range: "1mo", staleAfterMinutes: 90 },
   "1h": { interval: "60m", range: "3mo", staleAfterMinutes: 180 },
-  "1d": { interval: "1d", range: "1y", staleAfterMinutes: 60 * 36 }
+  "1d": { interval: "1d", range: "1y", staleAfterMinutes: 60 * 36 },
+  "1w": { interval: "1wk", range: "5y", staleAfterMinutes: 60 * 24 * 10 },
+  "1mo": { interval: "1mo", range: "10y", staleAfterMinutes: 60 * 24 * 45 }
 };
 
 export function isTimeframe(value: string | null): value is Timeframe {

@@ -4,7 +4,12 @@ export const messages = {
   ko: {
     appName: "Trading Helper",
     tagline: "미국 주식 단타 분석 대시보드",
-    disclaimer: "분석 보조 전용. 주문 실행 없음. 무료 공개 데이터는 지연/누락될 수 있습니다.",
+    disclaimer:
+      "분석 보조 전용. 주문 실행 없음. 무료 공개 데이터는 지연/누락될 수 있습니다. 투자 판단과 손실 책임은 사용자 본인에게 있으며 개발자는 투자 손실에 대해 책임지지 않습니다.",
+    nav: {
+      dashboard: "대시보드",
+      learn: "지표 배우기"
+    },
     language: {
       label: "언어",
       ko: "한국어",
@@ -28,6 +33,12 @@ export const messages = {
       zoomOut: "축소",
       resetZoom: "차트 초기화"
     },
+    chartControls: {
+      candleStyle: "캔들",
+      regular: "일반",
+      heikinAshi: "하이킨아시",
+      overlays: "타점 표시"
+    },
     signal: {
       loading: "신호 로딩",
       title: "Signal",
@@ -41,6 +52,21 @@ export const messages = {
       invalidation: "무효화",
       target: "목표",
       data: "데이터"
+    },
+    scanner: {
+      title: "즐겨찾기 스캐너",
+      add: "즐겨찾기 추가",
+      remove: "즐겨찾기 제거",
+      empty: "즐겨찾기를 추가하면 여기서 수동 스캔할 수 있습니다.",
+      scan: "즐겨찾기 스캔",
+      scanning: "스캔 중...",
+      score: "점수",
+      stop: "손절",
+      entry: "타점",
+      age: "데이터",
+      minutes: "분 전",
+      patterns: "패턴",
+      error: "스캔 실패"
     },
     risk: {
       loading: "리스크 로딩",
@@ -62,7 +88,12 @@ export const messages = {
   en: {
     appName: "Trading Helper",
     tagline: "U.S. stock scalping analysis dashboard",
-    disclaimer: "Analysis only. No order execution. Free public data can be delayed or incomplete.",
+    disclaimer:
+      "Analysis only. No order execution. Free public data can be delayed or incomplete. Investment decisions and losses are the user’s responsibility; developers are not liable for trading losses.",
+    nav: {
+      dashboard: "Dashboard",
+      learn: "Learn"
+    },
     language: {
       label: "Language",
       ko: "한국어",
@@ -86,6 +117,12 @@ export const messages = {
       zoomOut: "Zoom out",
       resetZoom: "Reset chart"
     },
+    chartControls: {
+      candleStyle: "Candles",
+      regular: "Regular",
+      heikinAshi: "Heikin-Ashi",
+      overlays: "Trade plan"
+    },
     signal: {
       loading: "Signal loading",
       title: "Signal",
@@ -99,6 +136,21 @@ export const messages = {
       invalidation: "Invalidation",
       target: "Targets",
       data: "Data"
+    },
+    scanner: {
+      title: "Favorites Scanner",
+      add: "Add favorite",
+      remove: "Remove favorite",
+      empty: "Add favorites, then scan them manually here.",
+      scan: "Scan favorites",
+      scanning: "Scanning...",
+      score: "Score",
+      stop: "Stop",
+      entry: "Entry",
+      age: "Data",
+      minutes: "m ago",
+      patterns: "Patterns",
+      error: "Scan failed"
     },
     risk: {
       loading: "Risk loading",

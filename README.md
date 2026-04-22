@@ -45,7 +45,11 @@ Trading Helper turns free public market data, technical indicators, long/short/n
 ## Highlights
 
 - Local web dashboard for U.S. equities: watchlist, symbol search, candlestick chart, signal card, risk panel, and AI chat.
+- Local favorites with manual scanner ranking for the best long/short setups in your saved symbols.
 - Scroll-wheel chart zoom, icon zoom controls, and drag panning across recent candles.
+- Daily, weekly, and monthly charts, plus regular and Heikin-Ashi candle display modes.
+- Volume histogram and trade-plan overlays for entry zone, stop loss, and 1R/2R targets.
+- Representative bullish/bearish candlestick pattern detection.
 - Localized price display: English shows USD; Korean converts the displayed U.S. stock price to KRW using the current USD/KRW rate and floors sub-won decimals.
 - Built for analysis support only: no broker connection, no order execution, no guaranteed real-time data.
 - Technical indicators: EMA 9/21/50/200, VWAP, RSI 14, MACD, Bollinger Bands, ATR, relative volume, OBV, and pivot support/resistance.
@@ -114,6 +118,10 @@ npm start
 
 Trading Helper is deliberately analysis-only. The assistant can explain setups, compare indicators, summarize risk, and clarify invalidation, but it does not place trades, connect to brokers, or claim certainty.
 
+## Learn the Indicators
+
+New to technical indicators? Open the built-in `/learn` page after starting the app. It explains EMA, VWAP, RSI, MACD, Bollinger Bands, ATR, relative volume, OBV, support/resistance, Heikin-Ashi, stop loss, and risk/reward in beginner-friendly language.
+
 ## Repository Layout
 
 - `apps/web`: Next.js local dashboard and API routes.
@@ -147,13 +155,18 @@ If Trading Helper helps your workflow, a star makes the project easier for other
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). Korean translation: [CONTRIBUTING.ko.md](./CONTRIBUTING.ko.md).
 
+Project workflow docs:
+
+- [Branching Policy](./docs/BRANCHING.md)
+- [Coding Style](./docs/CODING_STYLE.md)
+
 ## Security
 
 See [SECURITY.md](./SECURITY.md). Korean translation: [SECURITY.ko.md](./SECURITY.ko.md).
 
 ## Important Disclaimer
 
-Trading Helper is for education and analysis support only. It does not provide personalized financial advice, connect to brokers, execute orders, or guarantee live market data. The default market data path uses unofficial public Yahoo-style endpoints and should be treated as delayed, best-effort, and research-use only.
+Trading Helper is for education and analysis support only. It does not provide personalized financial advice, connect to brokers, execute orders, or guarantee live market data. Investment decisions and losses are the user’s responsibility; the developers are not liable for trading losses. The default market data path uses unofficial public Yahoo-style endpoints and should be treated as delayed, best-effort, and research-use only.
 
 ## License
 

@@ -56,6 +56,13 @@ export function SignalCard({ locale, labels, signal }: SignalCardProps) {
         </div>
       </dl>
       <div className="reason-list">
+        {signal.patterns.length > 0 && (
+          <p>
+            {signal.patterns
+              .map((pattern) => pattern.label[locale])
+              .join(", ")}
+          </p>
+        )}
         {signal.reasons.slice(0, 4).map((reason) => (
           <p key={reason}>{reason}</p>
         ))}

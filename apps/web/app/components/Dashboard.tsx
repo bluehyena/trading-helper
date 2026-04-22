@@ -1,10 +1,20 @@
 "use client";
 
 import type { MarketContext } from "@trading-helper/ai";
-import type { AppLocale, Candle, Quote, SignalResult, SymbolSearchResult, Timeframe } from "@trading-helper/core";
-import { AlertCircle, RefreshCcw, Search } from "lucide-react";
+import type {
+  AppLocale,
+  Candle,
+  CandleStyle,
+  Quote,
+  ScannerResult,
+  SignalResult,
+  SymbolSearchResult,
+  Timeframe
+} from "@trading-helper/core";
+import { AlertCircle, BookOpen, RefreshCcw, Search, Star } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { formatCurrency, formatKrw, formatPercent } from "../lib/format";
+import { formatCurrency, formatKrw, formatNumber, formatPercent } from "../lib/format";
 import { messages } from "../messages";
 import { AiChat } from "./AiChat";
 import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
@@ -26,8 +36,11 @@ interface FxRate {
   source: string;
 }
 
-const watchlist = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"];
-const timeframes: Timeframe[] = ["1m", "5m", "15m", "30m", "1h", "1d"];
+type ScanRow = ScannerResult | { symbol: string; error: string };
+
+const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META"];
+const timeframes: Timeframe[] = ["1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"];
+const favoritesKey = "trading-helper-favorites";
 
 export function Dashboard() {
   const [locale, setLocale] = useState<AppLocale>("ko");
@@ -38,6 +51,11 @@ export function Dashboard() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fxRate, setFxRate] = useState<FxRate | null>(null);
   const [searchResults, setSearchResults] = useState<SymbolSearchResult[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(defaultFavorites);
+  const [scanRows, setScanRows] = useState<ScanRow[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [candleStyle, setCandleStyle] = useState<CandleStyle>("regular");
+  const [showOverlays, setShowOverlays] = useState(true);
   const [toggles, setToggles] = useState<IndicatorToggles>({
     ema: true,
     vwap: true,
@@ -49,15 +67,22 @@ export function Dashboard() {
 
   useEffect(() => {
     const savedLocale = window.localStorage.getItem("trading-helper-locale");
+    const savedFavorites = readFavorites();
     if (savedLocale === "ko" || savedLocale === "en") {
       window.setTimeout(() => setLocale(savedLocale), 0);
+    }
+    if (savedFavorites.length > 0) {
+      window.setTimeout(() => setFavorites(savedFavorites), 0);
     }
   }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    window.localStorage.setItem("trading-helper-locale", locale);
   }, [locale]);
+
+  useEffect(() => {
+    window.localStorage.setItem(favoritesKey, JSON.stringify(favorites));
+  }, [favorites]);
 
   useEffect(() => {
     void loadMarket(symbol, timeframe, locale);
@@ -84,6 +109,7 @@ export function Dashboard() {
   const latestCandle = payload?.candles.at(-1) ?? null;
   const displayPriceUsd = quote?.price ?? latestCandle?.close ?? null;
   const displayPriceTimestamp = quote?.timestamp ?? latestCandle?.time ?? null;
+  const isFavorite = favorites.includes(symbol);
 
   const marketContext: MarketContext | null = useMemo(() => {
     if (!payload?.signal) {
@@ -92,15 +118,16 @@ export function Dashboard() {
 
     return {
       symbol,
-      quote: displayPriceUsd !== null && displayPriceTimestamp
-        ? {
-            price: displayPriceUsd,
-            change: quote?.change ?? 0,
-            changePercent: quote?.changePercent ?? 0,
-            marketState: quote?.marketState,
-            timestamp: displayPriceTimestamp
-          }
-        : undefined,
+      quote:
+        displayPriceUsd !== null && displayPriceTimestamp
+          ? {
+              price: displayPriceUsd,
+              change: quote?.change ?? 0,
+              changePercent: quote?.changePercent ?? 0,
+              marketState: quote?.marketState,
+              timestamp: displayPriceTimestamp
+            }
+          : undefined,
       signal: payload.signal
     };
   }, [displayPriceTimestamp, displayPriceUsd, payload, quote, symbol]);
@@ -136,6 +163,21 @@ export function Dashboard() {
     }
   }
 
+  async function scanFavorites() {
+    setIsScanning(true);
+    try {
+      const response = await fetch("/api/market/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbols: favorites, timeframe, locale })
+      });
+      const json = (await response.json()) as { results?: ScanRow[] };
+      setScanRows(json.results ?? []);
+    } finally {
+      setIsScanning(false);
+    }
+  }
+
   function chooseSymbol(nextSymbol: string) {
     const normalized = nextSymbol.trim().toUpperCase();
     if (!normalized) {
@@ -147,6 +189,22 @@ export function Dashboard() {
     setSearchResults([]);
   }
 
+  function toggleFavorite(nextSymbol = symbol) {
+    const normalized = nextSymbol.trim().toUpperCase();
+    if (!normalized) {
+      return;
+    }
+
+    setFavorites((current) =>
+      current.includes(normalized) ? current.filter((favorite) => favorite !== normalized) : [...current, normalized].slice(0, 25)
+    );
+  }
+
+  function changeLocale(nextLocale: AppLocale) {
+    setLocale(nextLocale);
+    window.localStorage.setItem("trading-helper-locale", nextLocale);
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -155,24 +213,29 @@ export function Dashboard() {
           <h1>{t.appName}</h1>
         </div>
         <div className="top-actions">
+          <Link className="learn-link" href="/learn">
+            <BookOpen size={17} aria-hidden />
+            {t.nav.learn}
+          </Link>
           <div className="language-switch" aria-label={t.language.label}>
             {(["ko", "en"] as AppLocale[]).map((item) => (
               <button
                 key={item}
                 type="button"
                 className={locale === item ? "active" : ""}
-                onClick={() => setLocale(item)}
+                onClick={() => changeLocale(item)}
               >
                 {t.language[item]}
               </button>
             ))}
           </div>
-          <div className="market-pill">
-            <AlertCircle size={16} aria-hidden />
-            <span>{t.disclaimer}</span>
-          </div>
         </div>
       </header>
+
+      <section className="market-pill full-width">
+        <AlertCircle size={16} aria-hidden />
+        <span>{t.disclaimer}</span>
+      </section>
 
       <section className="dashboard-grid">
         <aside className="watch-panel">
@@ -189,15 +252,34 @@ export function Dashboard() {
           {searchResults.length > 0 && (
             <div className="search-results">
               {searchResults.map((result) => (
-                <button key={result.symbol} type="button" onClick={() => chooseSymbol(result.symbol)}>
-                  <strong>{result.symbol}</strong>
-                  <span>{result.shortName}</span>
-                </button>
+                <div key={result.symbol} className="search-result-row">
+                  <button type="button" onClick={() => chooseSymbol(result.symbol)}>
+                    <strong>{result.symbol}</strong>
+                    <span>{result.shortName}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={favorites.includes(result.symbol) ? "star-button active" : "star-button"}
+                    onClick={() => toggleFavorite(result.symbol)}
+                    aria-label={favorites.includes(result.symbol) ? t.scanner.remove : t.scanner.add}
+                  >
+                    <Star size={16} aria-hidden />
+                  </button>
+                </div>
               ))}
             </div>
           )}
+          <div className="panel-head compact">
+            <div>
+              <p className="eyebrow">Scanner</p>
+              <h2>{t.scanner.title}</h2>
+            </div>
+            <button className="small-action" type="button" onClick={scanFavorites} disabled={isScanning || favorites.length === 0}>
+              {isScanning ? t.scanner.scanning : t.scanner.scan}
+            </button>
+          </div>
           <div className="watchlist">
-            {watchlist.map((item) => (
+            {favorites.map((item) => (
               <button
                 key={item}
                 type="button"
@@ -208,6 +290,34 @@ export function Dashboard() {
               </button>
             ))}
           </div>
+          {favorites.length === 0 && <p className="helper-text">{t.scanner.empty}</p>}
+          <div className="scanner-list">
+            {scanRows.map((row) =>
+              "error" in row ? (
+                <div key={row.symbol} className="scanner-row error">
+                  <strong>{row.symbol}</strong>
+                  <span>{t.scanner.error}</span>
+                </div>
+              ) : (
+                <button key={row.symbol} type="button" className="scanner-row" onClick={() => chooseSymbol(row.symbol)}>
+                  <span className="scanner-topline">
+                    <strong>{row.symbol}</strong>
+                    <b className={`bias-${row.bias.toLowerCase()}`}>{t.signal.bias[row.bias]}</b>
+                    <em>{t.scanner.score} {formatNumber(row.score, 1)}</em>
+                  </span>
+                  <span>{formatDisplayPrice(row.price, fxRate, locale)} · {row.keyReason}</span>
+                  <span>
+                    {t.scanner.entry}: {formatZone(row.entryZone)} · {t.scanner.stop}: {formatCurrency(row.invalidation)}
+                  </span>
+                  {row.patterns.length > 0 && (
+                    <span>
+                      {t.scanner.patterns}: {row.patterns.map((pattern) => pattern.label[locale]).join(", ")}
+                    </span>
+                  )}
+                </button>
+              )
+            )}
+          </div>
         </aside>
 
         <section className="chart-panel">
@@ -216,6 +326,14 @@ export function Dashboard() {
               <p className="eyebrow">{payload?.source ?? "Market data"}</p>
               <div className="symbol-row">
                 <h2>{symbol}</h2>
+                <button
+                  className={isFavorite ? "star-button active large" : "star-button large"}
+                  type="button"
+                  onClick={() => toggleFavorite(symbol)}
+                  aria-label={isFavorite ? t.scanner.remove : t.scanner.add}
+                >
+                  <Star size={18} aria-hidden />
+                </button>
                 {displayPriceUsd !== null && (
                   <>
                     <span className="current-price" title={priceTitle(displayPriceUsd, fxRate, locale)}>
@@ -263,14 +381,23 @@ export function Dashboard() {
               checked={toggles.bollinger}
               onChange={() => setToggles({ ...toggles, bollinger: !toggles.bollinger })}
             />
+            <Toggle
+              label={t.chartControls.heikinAshi}
+              checked={candleStyle === "heikin_ashi"}
+              onChange={() => setCandleStyle(candleStyle === "regular" ? "heikin_ashi" : "regular")}
+            />
+            <Toggle label={t.chartControls.overlays} checked={showOverlays} onChange={() => setShowOverlays(!showOverlays)} />
           </div>
           {error && <div className="error-box">{error}</div>}
           {!error && payload && (
             <CandlestickChart
               key={`${symbol}-${timeframe}`}
+              candleStyle={candleStyle}
               candles={payload.candles}
               locale={locale}
               labels={t.chart}
+              showOverlays={showOverlays}
+              signal={payload.signal}
               toggles={toggles}
             />
           )}
@@ -288,6 +415,16 @@ export function Dashboard() {
   );
 }
 
+function readFavorites(): string[] {
+  try {
+    const raw = window.localStorage.getItem(favoritesKey);
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+    return parsed.map((symbol) => symbol.toUpperCase()).filter(Boolean).slice(0, 25);
+  } catch {
+    return [];
+  }
+}
+
 function formatDisplayPrice(priceUsd: number, fxRate: FxRate | null, locale: AppLocale): string {
   if (locale === "ko" && fxRate) {
     return formatKrw(priceUsd * fxRate.rate);
@@ -302,6 +439,14 @@ function priceTitle(priceUsd: number, fxRate: FxRate | null, locale: AppLocale):
   }
 
   return `${formatCurrency(priceUsd)} USD`;
+}
+
+function formatZone(zone: ScannerResult["entryZone"]): string {
+  if (!zone) {
+    return "-";
+  }
+
+  return `${formatCurrency(zone.low)}-${formatCurrency(zone.high)}`;
 }
 
 function Toggle({

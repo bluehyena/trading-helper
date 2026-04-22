@@ -97,10 +97,18 @@ export class AlphaVantageMarketDataProvider implements MarketDataProvider {
   async getCandles(symbol: string, timeframe: Timeframe): Promise<Candle[]> {
     const normalized = normalizeSymbol(symbol);
     const isDaily = timeframe === "1d";
+    const isWeekly = timeframe === "1w";
+    const isMonthly = timeframe === "1mo";
     const response = await this.query<AlphaVantageTimeSeriesResponse>({
-      function: isDaily ? "TIME_SERIES_DAILY" : "TIME_SERIES_INTRADAY",
+      function: isMonthly
+        ? "TIME_SERIES_MONTHLY"
+        : isWeekly
+          ? "TIME_SERIES_WEEKLY"
+          : isDaily
+            ? "TIME_SERIES_DAILY"
+            : "TIME_SERIES_INTRADAY",
       symbol: normalized,
-      ...(isDaily
+      ...(isDaily || isWeekly || isMonthly
         ? { outputsize: "compact" }
         : {
             interval: alphaVantageInterval(timeframe),
@@ -150,6 +158,10 @@ export function parseAlphaVantageTimeSeries(
   const key =
     timeframe === "1d"
       ? "Time Series (Daily)"
+      : timeframe === "1w"
+        ? "Weekly Time Series"
+        : timeframe === "1mo"
+          ? "Monthly Time Series"
       : `Time Series (${alphaVantageInterval(timeframe)})`;
   const series = response[key] as Record<string, Record<string, string>> | undefined;
 
