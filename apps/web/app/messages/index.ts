@@ -42,6 +42,12 @@ export const messages = {
       heikinAshi: "하이킨아시",
       overlays: "타점 표시"
     },
+    realtime: {
+      checking: "실시간 확인 중",
+      ready: "실시간 준비됨",
+      missing: "실시간 키 필요",
+      missingTitle: ".env에 POLYGON_API_KEY를 설정하면 1s/5s/15s 캔들이 활성화됩니다."
+    },
     signal: {
       loading: "신호 로딩",
       title: "Signal",
@@ -129,6 +135,12 @@ export const messages = {
       regular: "Regular",
       heikinAshi: "Heikin-Ashi",
       overlays: "Trade plan"
+    },
+    realtime: {
+      checking: "Checking realtime",
+      ready: "Realtime ready",
+      missing: "Realtime key needed",
+      missingTitle: "Set POLYGON_API_KEY in .env to enable 1s/5s/15s candles."
     },
     signal: {
       loading: "Signal loading",

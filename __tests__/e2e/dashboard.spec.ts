@@ -106,6 +106,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "하이킨아시" })).toBeVisible();
   await expect(page.getByRole("button", { name: "타점 표시" })).toBeVisible();
   await expect(page.getByRole("button", { name: "1s" })).toBeDisabled();
+  await expect(page.getByText("실시간 키 필요")).toBeVisible();
   await expect(page.getByRole("button", { name: "QQQ" })).toBeVisible();
   await expect(page.locator(".signal .pattern-direction.long").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "수급 체크" })).toBeVisible();
@@ -122,6 +123,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByText("패턴: 상승 장악형")).toBeVisible();
   await expect(page.getByText("차트형태: 불 플래그")).toBeVisible();
   await page.getByLabel("종목 검색").fill("QQQ");
+  await expect(page.locator(".search-results").getByText("ETF")).toBeVisible();
   await page.getByText("Invesco QQQ Trust").click();
   await expect(page.getByRole("heading", { name: "QQQ" })).toBeVisible();
 
@@ -209,12 +211,15 @@ test("renders mocked realtime seconds candles and time and sales", async ({ page
   });
 
   await page.goto("/");
+  await expect(page.getByText("실시간 준비됨")).toBeVisible();
   await page.getByRole("button", { name: "1s" }).click();
 
   await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "체결창" })).toBeVisible();
   await expect(page.getByText("매수호가")).toBeVisible();
-  await expect(page.getByText("매수체결")).toBeVisible();
+  await expect(page.getByText("최근 체결")).toBeVisible();
+  await expect(page.getByText("매수체결량")).toBeVisible();
+  await expect(page.getByText("매수체결", { exact: true })).toBeVisible();
   await expect(page.locator(".current-price")).toHaveText("₩700,000");
 });
 

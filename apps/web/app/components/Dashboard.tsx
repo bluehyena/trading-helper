@@ -52,7 +52,8 @@ interface RealtimeStatus {
 
 type ScanRow = ScannerResult | { symbol: string; error: string };
 
-const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", "SPY", "QQQ", "VOO"];
+const defaultEtfFavorites = ["SPY", "QQQ", "VOO"];
+const defaultFavorites = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", ...defaultEtfFavorites];
 const timeframes: Timeframe[] = ["1s", "5s", "15s", "1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo"];
 const favoritesKey = "trading-helper-favorites";
 const lastSymbolKey = "trading-helper-last-symbol";
@@ -88,6 +89,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const t = messages[locale];
   const isRealtime = isRealtimeTimeframe(timeframe);
+  const realtimeStatusKind = realtimeStatus ? (realtimeStatus.configured ? "ready" : "missing") : "checking";
 
   useEffect(() => {
     const savedLocale = window.localStorage.getItem("trading-helper-locale");
@@ -468,7 +470,10 @@ export function Dashboard() {
                 <div key={result.symbol} className="search-result-row">
                   <button type="button" onClick={() => chooseSymbol(result.symbol)}>
                     <strong>{result.symbol}</strong>
-                    <span>{result.shortName}</span>
+                    <span className="search-result-meta">
+                      <span className="result-name">{result.shortName}</span>
+                      {result.quoteType && <em className="asset-badge">{result.quoteType}</em>}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -611,6 +616,13 @@ export function Dashboard() {
               onChange={() => setCandleStyle(candleStyle === "regular" ? "heikin_ashi" : "regular")}
             />
             <Toggle label={t.chartControls.overlays} checked={showOverlays} onChange={() => setShowOverlays(!showOverlays)} />
+            <span
+              className={`realtime-status ${realtimeStatusKind}`}
+              title={realtimeStatusKind === "missing" ? t.realtime.missingTitle : realtimeStatus?.source}
+            >
+              <span aria-hidden />
+              {t.realtime[realtimeStatusKind]}
+            </span>
           </div>
           {error && <div className="error-box">{error}</div>}
           {!error && payload && payload.candles.length > 0 && (
@@ -645,10 +657,27 @@ function readFavorites(): string[] {
   try {
     const raw = window.localStorage.getItem(favoritesKey);
     const parsed = raw ? (JSON.parse(raw) as string[]) : [];
-    return parsed.map((symbol) => symbol.toUpperCase()).filter(Boolean).slice(0, 25);
+    const saved = parsed.map((symbol) => symbol.toUpperCase()).filter(Boolean);
+    return saved.length > 0 ? mergeFavorites(saved, defaultEtfFavorites) : [];
   } catch {
     return [];
   }
+}
+
+function mergeFavorites(primary: string[], additions: string[]): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const symbol of [...primary, ...additions]) {
+    const normalized = symbol.trim().toUpperCase();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    merged.push(normalized);
+  }
+
+  return merged.slice(0, 25);
 }
 
 function normalizeStoredSymbol(value: string | null): string | null {
