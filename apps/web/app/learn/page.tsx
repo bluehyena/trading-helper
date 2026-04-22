@@ -90,6 +90,26 @@ const indicatorCards = [
     key: "Data Staleness",
     ko: "무료 공개 데이터는 지연되거나 누락될 수 있습니다. 단타에서는 데이터 시간이 오래될수록 신호 신뢰도를 낮춰 봐야 합니다.",
     en: "Free public data can be delayed or incomplete. For short-term trading, older data should lower confidence."
+  },
+  {
+    key: "1s / 5s / 15s Candles",
+    ko: "실시간 체결을 초 단위로 묶은 캔들입니다. 움직임은 빠르게 보이지만 노이즈가 커서 상위 시간대 추세와 함께 봐야 합니다.",
+    en: "Candles built from realtime trades grouped by seconds. They react quickly, but are noisy and should be checked against higher timeframes."
+  },
+  {
+    key: "Time & Sales",
+    ko: "최근 체결 가격, 수량, 시간을 보여주는 체결창입니다. 추격매수 전 실제 체결이 따라오는지 확인하는 데 도움이 됩니다.",
+    en: "A tape of recent trade price, size, and time. It helps check whether actual trades are supporting a move before chasing."
+  },
+  {
+    key: "Bid / Ask Spread",
+    ko: "최우선 매수호가와 매도호가의 차이입니다. 스프레드가 넓으면 진입 비용과 미끄러짐 리스크가 커질 수 있습니다.",
+    en: "The gap between best bid and best ask. A wide spread can increase entry cost and slippage risk."
+  },
+  {
+    key: "Level 1 vs Level 2",
+    ko: "Level 1은 최우선 bid/ask만 보여주고, Level 2는 여러 가격대 잔량을 보여줍니다. 이 앱 v1은 Level 1까지만 지원합니다.",
+    en: "Level 1 shows only the best bid/ask, while Level 2 shows depth across price levels. This app's v1 supports Level 1 only."
   }
 ] as const;
 

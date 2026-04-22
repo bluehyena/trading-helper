@@ -6,7 +6,7 @@ import type {
   SymbolSearchResult,
   Timeframe
 } from "../types";
-import { timeframeConfig } from "./timeframes";
+import { isRealtimeTimeframe, timeframeConfig } from "./timeframes";
 
 const YAHOO_SOURCE =
   "Yahoo Finance public endpoints (unofficial, delayed/best-effort, research-use)";
@@ -19,7 +19,7 @@ interface YahooSearchQuote {
   quoteType?: string;
 }
 
-interface YahooSearchResponse {
+export interface YahooSearchResponse {
   quotes?: YahooSearchQuote[];
 }
 
@@ -74,15 +74,7 @@ export class YahooMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("newsCount", "0");
 
     const response = await fetchJson<YahooSearchResponse>(url);
-    return (response.quotes ?? [])
-      .filter((quote) => quote.symbol && quote.quoteType === "EQUITY")
-      .slice(0, 8)
-      .map((quote) => ({
-        symbol: quote.symbol as string,
-        shortName: quote.shortname ?? quote.longname ?? quote.symbol ?? "",
-        exchange: quote.exchDisp,
-        quoteType: quote.quoteType
-      }));
+    return parseYahooSearchResponse(response);
   }
 
   async getQuote(symbol: string): Promise<Quote> {
@@ -113,6 +105,10 @@ export class YahooMarketDataProvider implements MarketDataProvider {
   }
 
   async getCandles(symbol: string, timeframe: Timeframe): Promise<Candle[]> {
+    if (isRealtimeTimeframe(timeframe)) {
+      throw new Error(`${timeframe} candles require a configured realtime WebSocket provider.`);
+    }
+
     const normalized = normalizeSymbol(symbol);
     const config = timeframeConfig[timeframe];
     const url = new URL(
@@ -139,6 +135,18 @@ export class YahooMarketDataProvider implements MarketDataProvider {
       timestamp: now.toISOString()
     };
   }
+}
+
+export function parseYahooSearchResponse(response: YahooSearchResponse): SymbolSearchResult[] {
+  return (response.quotes ?? [])
+    .filter((quote) => quote.symbol && (quote.quoteType === "EQUITY" || quote.quoteType === "ETF"))
+    .slice(0, 8)
+    .map((quote) => ({
+      symbol: quote.symbol as string,
+      shortName: quote.shortname ?? quote.longname ?? quote.symbol ?? "",
+      exchange: quote.exchDisp,
+      quoteType: quote.quoteType
+    }));
 }
 
 export function parseYahooChartResponse(response: YahooChartResponse, symbol: string): Candle[] {

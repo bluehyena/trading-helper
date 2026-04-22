@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { analyzeSignal, createMarketDataProvider, isTimeframe, type AppLocale } from "@trading-helper/core";
+import { analyzeSignal, createMarketDataProvider, isRealtimeTimeframe, isTimeframe, type AppLocale } from "@trading-helper/core";
 
 const provider = createMarketDataProvider();
 
@@ -11,6 +11,10 @@ export async function GET(request: Request) {
 
   if (!isTimeframe(timeframe)) {
     return NextResponse.json({ error: "Unsupported timeframe." }, { status: 400 });
+  }
+
+  if (isRealtimeTimeframe(timeframe)) {
+    return NextResponse.json({ error: "Second-level candles require the realtime stream endpoint." }, { status: 400 });
   }
 
   try {

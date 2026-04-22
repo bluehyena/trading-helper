@@ -24,7 +24,10 @@ export const messages = {
     errors: {
       candles: "캔들 데이터를 불러오지 못했습니다.",
       market: "데이터를 불러오지 못했습니다.",
-      loading: "데이터 갱신 중..."
+      loading: "데이터 갱신 중...",
+      realtime: "실시간 스트림을 불러오지 못했습니다.",
+      realtimeKey: "초단위 캔들은 POLYGON_API_KEY 설정이 필요합니다.",
+      realtimeWaiting: "실시간 체결을 기다리는 중..."
     },
     chart: {
       noData: "차트 데이터가 없습니다.",
@@ -109,7 +112,10 @@ export const messages = {
     errors: {
       candles: "Could not load candle data.",
       market: "Could not load market data.",
-      loading: "Refreshing data..."
+      loading: "Refreshing data...",
+      realtime: "Could not load the realtime stream.",
+      realtimeKey: "Second-level candles require POLYGON_API_KEY.",
+      realtimeWaiting: "Waiting for realtime trades..."
     },
     chart: {
       noData: "No chart data is available.",
