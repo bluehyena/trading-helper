@@ -51,6 +51,7 @@ export function Dashboard() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fxRate, setFxRate] = useState<FxRate | null>(null);
   const [searchResults, setSearchResults] = useState<SymbolSearchResult[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(defaultFavorites);
   const [scanRows, setScanRows] = useState<ScanRow[]>([]);
   const [isScanning, setIsScanning] = useState(false);
@@ -187,6 +188,7 @@ export function Dashboard() {
     setSymbol(normalized);
     setQuery(normalized);
     setSearchResults([]);
+    setIsSearchOpen(false);
   }
 
   function toggleFavorite(nextSymbol = symbol) {
@@ -247,9 +249,18 @@ export function Dashboard() {
             }}
           >
             <Search size={18} aria-hidden />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label={t.aria.symbolSearch} />
+            <input
+              value={query}
+              onBlur={() => window.setTimeout(() => setIsSearchOpen(false), 120)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setIsSearchOpen(true);
+              }}
+              onFocus={() => setIsSearchOpen(true)}
+              aria-label={t.aria.symbolSearch}
+            />
           </form>
-          {searchResults.length > 0 && (
+          {isSearchOpen && searchResults.length > 0 && (
             <div className="search-results">
               {searchResults.map((result) => (
                 <div key={result.symbol} className="search-result-row">

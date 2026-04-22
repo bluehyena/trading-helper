@@ -31,6 +31,13 @@ interface CandlestickChartProps {
   toggles: IndicatorToggles;
 }
 
+interface HoverState {
+  svgX: number;
+  svgY: number;
+  price: number;
+  candle: Candle;
+}
+
 const WIDTH = 960;
 const HEIGHT = 420;
 const PADDING = { top: 18, right: 72, bottom: 34, left: 18 };
@@ -45,6 +52,7 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
   const [offsetFromEnd, setOffsetFromEnd] = useState(0);
   const [dragStart, setDragStart] = useState<{ x: number; offset: number } | null>(null);
+  const [hover, setHover] = useState<HoverState | null>(null);
   const maxVisibleCount = Math.max(MIN_VISIBLE_COUNT, candles.length);
   const boundedVisibleCount = clamp(visibleCount, MIN_VISIBLE_COUNT, maxVisibleCount);
   const maxOffset = Math.max(0, candles.length - boundedVisibleCount);
@@ -124,16 +132,37 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!dragStart) {
-      return;
-    }
+    setHover(hoverFromPointer(event));
 
-    const candleDelta = Math.round((event.clientX - dragStart.x) / Math.max(xStep, 1));
-    setOffsetFromEnd(clamp(dragStart.offset + candleDelta, 0, maxOffset));
+    if (dragStart) {
+      const candleDelta = Math.round((event.clientX - dragStart.x) / Math.max(xStep, 1));
+      setOffsetFromEnd(clamp(dragStart.offset + candleDelta, 0, maxOffset));
+    }
   }
 
   function handlePointerEnd() {
     setDragStart(null);
+  }
+
+  function handlePointerLeave() {
+    setHover(null);
+    setDragStart(null);
+  }
+
+  function hoverFromPointer(event: PointerEvent<HTMLDivElement>): HoverState {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const rawX = ((event.clientX - rect.left) / rect.width) * WIDTH;
+    const rawY = ((event.clientY - rect.top) / rect.height) * HEIGHT;
+    const svgY = clamp(rawY, PADDING.top, PADDING.top + PRICE_HEIGHT);
+    const index = clamp(Math.round((clamp(rawX, PADDING.left, WIDTH - PADDING.right) - PADDING.left) / xStep), 0, visible.length - 1);
+    const price = yMax - ((svgY - PADDING.top) / PRICE_HEIGHT) * (yMax - yMin);
+
+    return {
+      svgX: xFor(index),
+      svgY,
+      price,
+      candle: regularVisible[index]
+    };
   }
 
   return (
@@ -144,6 +173,7 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
+      onPointerLeave={handlePointerLeave}
     >
       <div className="chart-controls" onPointerDown={(event) => event.stopPropagation()}>
         <button type="button" onClick={() => zoom("in")} aria-label={labels.zoomIn} title={labels.zoomIn}>
@@ -219,8 +249,34 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
           );
         })}
         <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={VOLUME_TOP} y2={VOLUME_TOP} className="volume-separator" />
+        {hover && <ChartCrosshair hover={hover} locale={locale} />}
       </svg>
     </div>
+  );
+}
+
+function ChartCrosshair({ hover, locale }: { hover: HoverState; locale: AppLocale }) {
+  const boxWidth = 194;
+  const boxHeight = 58;
+  const boxX = hover.svgX > WIDTH - PADDING.right - boxWidth - 16 ? hover.svgX - boxWidth - 12 : hover.svgX + 12;
+  const boxY = hover.svgY < PADDING.top + boxHeight + 10 ? hover.svgY + 14 : hover.svgY - boxHeight - 10;
+  const closeLabel = locale === "en" ? "Close" : "종가";
+
+  return (
+    <g className="crosshair-tooltip">
+      <line x1={hover.svgX} x2={hover.svgX} y1={PADDING.top} y2={VOLUME_TOP + VOLUME_HEIGHT} className="crosshair-line" />
+      <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={hover.svgY} y2={hover.svgY} className="crosshair-line" />
+      <rect x={boxX} y={boxY} width={boxWidth} height={boxHeight} rx="6" className="crosshair-box" />
+      <text x={boxX + 10} y={boxY + 19} className="crosshair-price">
+        {formatCurrency(hover.price)}
+      </text>
+      <text x={boxX + 10} y={boxY + 36} className="crosshair-text">
+        {formatHoverTime(hover.candle.time, locale)}
+      </text>
+      <text x={boxX + 10} y={boxY + 51} className="crosshair-text">
+        {closeLabel} {formatCurrency(hover.candle.close)}
+      </text>
+    </g>
   );
 }
 
@@ -378,6 +434,15 @@ function buildTimeLabels(candles: Candle[], locale: AppLocale): Array<{ index: n
       }).format(date)
     };
   });
+}
+
+function formatHoverTime(value: string, locale: AppLocale): string {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function clamp(value: number, min: number, max: number): number {
