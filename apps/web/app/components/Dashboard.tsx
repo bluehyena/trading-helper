@@ -314,6 +314,11 @@ export function Dashboard() {
                       {t.scanner.patterns}: {row.patterns.map((pattern) => pattern.label[locale]).join(", ")}
                     </span>
                   )}
+                  {row.chartPatterns.length > 0 && (
+                    <span>
+                      {t.scanner.chartPatterns}: {row.chartPatterns.map((pattern) => pattern.label[locale]).join(", ")}
+                    </span>
+                  )}
                 </button>
               )
             )}

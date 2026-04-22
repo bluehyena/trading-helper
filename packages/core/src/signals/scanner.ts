@@ -60,6 +60,21 @@ export function rankScannerResult({
     });
   }
 
+  const alignedChartPatterns = signal.chartPatterns.filter((pattern) =>
+    signal.bias === "LONG" ? pattern.direction === "BULLISH" : signal.bias === "SHORT" ? pattern.direction === "BEARISH" : false
+  );
+  if (alignedChartPatterns.length > 0) {
+    const chartPatternBonus = alignedChartPatterns.some((pattern) => pattern.strength === "HIGH") ? 12 : 7;
+    score += chartPatternBonus;
+    rankReasons.push({
+      label:
+        locale === "en"
+          ? `${alignedChartPatterns[0].label.en} +${chartPatternBonus}`
+          : `${alignedChartPatterns[0].label.ko} +${chartPatternBonus}`,
+      weight: chartPatternBonus
+    });
+  }
+
   if (dataAgeMinutes !== null && dataAgeMinutes > 60) {
     const penalty = Math.min(18, dataAgeMinutes / 20);
     score -= penalty;
@@ -82,6 +97,7 @@ export function rankScannerResult({
     keyReason: signal.reasons[0] ?? (locale === "en" ? "No clear reason" : "뚜렷한 근거 없음"),
     dataAgeMinutes: dataAgeMinutes === null ? null : round(dataAgeMinutes, 1),
     patterns: signal.patterns,
+    chartPatterns: signal.chartPatterns,
     rankReasons,
     signal
   };

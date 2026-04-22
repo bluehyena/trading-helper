@@ -184,7 +184,7 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
           </>
         )}
         {toggles.vwap && <path d={linePath(vwapValues, xFor, yFor)} className="line vwap-line" />}
-        {showOverlays && signal && <TradeOverlays signal={signal} yFor={yFor} />}
+        {showOverlays && signal && <TradeOverlays locale={locale} signal={signal} visible={visible} xFor={xFor} yFor={yFor} />}
         {visible.map((candle, index) => {
           const x = xFor(index);
           const openY = yFor(candle.open);
@@ -224,9 +224,22 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
   );
 }
 
-function TradeOverlays({ signal, yFor }: { signal: SignalResult; yFor: (price: number) => number }) {
+function TradeOverlays({
+  locale,
+  signal,
+  visible,
+  xFor,
+  yFor
+}: {
+  locale: AppLocale;
+  signal: SignalResult;
+  visible: Candle[];
+  xFor: (index: number) => number;
+  yFor: (price: number) => number;
+}) {
   return (
     <g className="trade-overlays">
+      <ChartPatternOverlays locale={locale} signal={signal} visible={visible} xFor={xFor} yFor={yFor} />
       {signal.entryZone && (
         <rect
           x={PADDING.left}
@@ -242,6 +255,52 @@ function TradeOverlays({ signal, yFor }: { signal: SignalResult; yFor: (price: n
       {signal.targets.map((target) => (
         <OverlayLine key={target.label} price={target.price} yFor={yFor} className="target-line" label={target.label} />
       ))}
+    </g>
+  );
+}
+
+function ChartPatternOverlays({
+  locale,
+  signal,
+  visible,
+  xFor,
+  yFor
+}: {
+  locale: AppLocale;
+  signal: SignalResult;
+  visible: Candle[];
+  xFor: (index: number) => number;
+  yFor: (price: number) => number;
+}) {
+  const timestampToIndex = new Map(visible.map((candle, index) => [candle.timestamp, index]));
+
+  return (
+    <g className="chart-pattern-overlays">
+      {signal.chartPatterns.slice(0, 2).map((pattern) => {
+        const visiblePoints = pattern.points
+          .map((point) => {
+            const index = timestampToIndex.get(point.timestamp);
+            return index === undefined ? null : `${xFor(index).toFixed(2)},${yFor(point.price).toFixed(2)}`;
+          })
+          .filter((point): point is string => point !== null);
+
+        return (
+          <g key={pattern.id}>
+            {visiblePoints.length >= 2 && <polyline points={visiblePoints.join(" ")} className="pattern-polyline" />}
+            {pattern.levels.slice(0, 2).map((chartLevel) => {
+              const y = yFor(chartLevel.price);
+              return (
+                <g key={`${pattern.id}-${chartLevel.label.en}`}>
+                  <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y} y2={y} className="pattern-level-line" />
+                  <text x={PADDING.left + 8} y={y - 5} className="pattern-label">
+                    {chartLevel.label[locale]} {formatCurrency(chartLevel.price)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        );
+      })}
     </g>
   );
 }
@@ -270,6 +329,10 @@ function OverlayLine({
 
 function overlayPriceValues(signal: SignalResult): number[] {
   const values = signal.targets.map((target) => target.price);
+  values.push(...signal.chartPatterns.flatMap((pattern) => [
+    ...pattern.levels.map((chartLevel) => chartLevel.price),
+    ...pattern.points.map((point) => point.price)
+  ]));
   if (signal.entryZone) {
     values.push(signal.entryZone.low, signal.entryZone.high);
   }

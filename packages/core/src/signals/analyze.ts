@@ -1,5 +1,6 @@
 import { clamp, indicatorSnapshot, round } from "../indicators";
 import type { AppLocale, Candle, IndicatorSnapshot, SignalBias, SignalResult, Timeframe } from "../types";
+import { detectChartPatterns } from "./chart-patterns";
 import { detectCandlestickPatterns } from "./patterns";
 import { isDataStale, minutesSinceLatestCandle } from "./staleness";
 
@@ -76,6 +77,7 @@ export function analyzeSignal({
   const latest = candles.at(-1);
   const previous = candles.at(-2);
   const patterns = detectCandlestickPatterns(candles);
+  const chartPatterns = detectChartPatterns(candles);
   const reasons: string[] = [];
   const warnings: string[] = [copy.analysisOnly as string];
 
@@ -93,6 +95,7 @@ export function analyzeSignal({
       warnings,
       indicators,
       patterns,
+      chartPatterns,
       dataTimestamp: now.toISOString(),
       source
     };
@@ -203,6 +206,16 @@ export function analyzeSignal({
     }
   }
 
+  for (const pattern of chartPatterns) {
+    const weight = pattern.strength === "HIGH" ? 0.9 : pattern.strength === "MEDIUM" ? 0.55 : 0.3;
+    if (pattern.direction === "BULLISH") {
+      score += weight;
+    } else {
+      score -= weight;
+    }
+    reasons.push(locale === "en" ? `${pattern.label.en} chart pattern detected.` : `${pattern.label.ko} 차트 형태가 감지됐습니다.`);
+  }
+
   const bias = score >= 2.2 ? "LONG" : score <= -2.2 ? "SHORT" : "NEUTRAL";
   const confidence = confidenceFromScore(score, warnings.length, bias);
   const tradePlan = buildTradePlan(bias, close, atr, indicators.support, indicators.resistance);
@@ -220,6 +233,7 @@ export function analyzeSignal({
     warnings,
     indicators: roundIndicators(indicators),
     patterns,
+    chartPatterns,
     dataTimestamp: latest.time,
     source
   };

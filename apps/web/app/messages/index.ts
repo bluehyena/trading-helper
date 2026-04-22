@@ -66,6 +66,7 @@ export const messages = {
       age: "데이터",
       minutes: "분 전",
       patterns: "패턴",
+      chartPatterns: "차트형태",
       error: "스캔 실패"
     },
     risk: {
@@ -150,6 +151,7 @@ export const messages = {
       age: "Data",
       minutes: "m ago",
       patterns: "Patterns",
+      chartPatterns: "Chart",
       error: "Scan failed"
     },
     risk: {

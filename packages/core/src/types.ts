@@ -10,6 +10,21 @@ export type PatternDirection = "BULLISH" | "BEARISH";
 
 export type PatternStrength = "LOW" | "MEDIUM" | "HIGH";
 
+export type ChartPatternId =
+  | "head_and_shoulders"
+  | "inverse_head_and_shoulders"
+  | "bull_flag"
+  | "bear_flag"
+  | "bullish_pennant"
+  | "bearish_pennant"
+  | "ascending_triangle"
+  | "descending_triangle"
+  | "symmetrical_triangle"
+  | "double_top"
+  | "double_bottom"
+  | "rising_wedge"
+  | "falling_wedge";
+
 export interface Candle {
   timestamp: number;
   time: string;
@@ -109,6 +124,36 @@ export interface PatternSignal {
   };
 }
 
+export interface ChartPatternPoint {
+  timestamp: number;
+  price: number;
+  role: string;
+}
+
+export interface ChartPatternLevel {
+  label: {
+    ko: string;
+    en: string;
+  };
+  price: number;
+}
+
+export interface ChartPatternSignal {
+  id: ChartPatternId;
+  direction: PatternDirection;
+  strength: PatternStrength;
+  label: {
+    ko: string;
+    en: string;
+  };
+  description: {
+    ko: string;
+    en: string;
+  };
+  levels: ChartPatternLevel[];
+  points: ChartPatternPoint[];
+}
+
 export interface SignalResult {
   symbol: string;
   timeframe: Timeframe;
@@ -122,6 +167,7 @@ export interface SignalResult {
   warnings: string[];
   indicators: IndicatorSnapshot;
   patterns: PatternSignal[];
+  chartPatterns: ChartPatternSignal[];
   dataTimestamp: string;
   source: string;
 }
@@ -150,6 +196,7 @@ export interface ScannerResult {
   keyReason: string;
   dataAgeMinutes: number | null;
   patterns: PatternSignal[];
+  chartPatterns: ChartPatternSignal[];
   rankReasons: ScannerRankReason[];
   signal: SignalResult;
 }

@@ -51,6 +51,7 @@ function makeRequest(content: string): AiChatRequest {
         reasons: ["EMA 배열이 상승 방향입니다."],
         warnings: ["무료 공개 데이터 기반의 분석 보조입니다."],
         patterns: [],
+        chartPatterns: [],
         indicators: {
           ema9: 200,
           ema21: 198,

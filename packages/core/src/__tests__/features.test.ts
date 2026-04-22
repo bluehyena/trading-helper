@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeSignal,
+  detectChartPatterns,
   detectCandlestickPatterns,
   isTimeframe,
   rankScannerResult,
@@ -44,6 +45,16 @@ describe("extended market features", () => {
     expect(bearish.some((pattern) => pattern.id === "bearish_engulfing")).toBe(true);
   });
 
+  it("detects chart structure patterns such as head and shoulders and bull flags", () => {
+    const headAndShoulders = detectChartPatterns(
+      closeSeries([100, 102, 104, 103, 101, 99, 101, 104, 108, 106, 103, 100, 102, 104, 103, 101, 98])
+    );
+    const bullFlag = detectChartPatterns(makeBullFlagCandles());
+
+    expect(headAndShoulders.some((pattern) => pattern.id === "head_and_shoulders")).toBe(true);
+    expect(bullFlag.some((pattern) => pattern.id === "bull_flag" || pattern.id === "bullish_pennant")).toBe(true);
+  });
+
   it("ranks scanner results by signal quality and setup proximity", () => {
     const candles = makeCandles(220);
     const signal = analyzeSignal({
@@ -81,6 +92,25 @@ function makeCandles(count: number): Candle[] {
       volume: 1_000 + index * 5
     };
   });
+}
+
+function closeSeries(values: number[]): Candle[] {
+  const baseTime = Date.now() - values.length * 5 * 60_000;
+  return values.map((close, index) => ({
+    timestamp: baseTime + index * 5 * 60_000,
+    time: new Date(baseTime + index * 5 * 60_000).toISOString(),
+    open: index === 0 ? close : values[index - 1],
+    high: close + 0.35,
+    low: close - 0.35,
+    close,
+    volume: 1_500
+  }));
+}
+
+function makeBullFlagCandles(): Candle[] {
+  const impulse = Array.from({ length: 24 }, (_, index) => 100 + index * 0.32);
+  const flag = Array.from({ length: 18 }, (_, index) => 107.7 - index * 0.08 + Math.sin(index / 2) * 0.05);
+  return closeSeries([...impulse, ...flag]);
 }
 
 function candle(open: number, high: number, low: number, close: number): Candle {

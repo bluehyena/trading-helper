@@ -50,6 +50,7 @@ Trading Helper turns free public market data, technical indicators, long/short/n
 - Daily, weekly, and monthly charts, plus regular and Heikin-Ashi candle display modes.
 - Volume histogram and trade-plan overlays for entry zone, stop loss, and 1R/2R targets.
 - Representative bullish/bearish candlestick pattern detection.
+- Structure-based chart pattern detection for head and shoulders, inverse head and shoulders, bull/bear flags, pennants, triangles, wedges, and double tops/bottoms.
 - Localized price display: English shows USD; Korean converts the displayed U.S. stock price to KRW using the current USD/KRW rate and floors sub-won decimals.
 - Built for analysis support only: no broker connection, no order execution, no guaranteed real-time data.
 - Technical indicators: EMA 9/21/50/200, VWAP, RSI 14, MACD, Bollinger Bands, ATR, relative volume, OBV, and pivot support/resistance.
@@ -120,7 +121,7 @@ Trading Helper is deliberately analysis-only. The assistant can explain setups, 
 
 ## Learn the Indicators
 
-New to technical indicators? Open the built-in `/learn` page after starting the app. It explains EMA, VWAP, RSI, MACD, Bollinger Bands, ATR, relative volume, OBV, support/resistance, Heikin-Ashi, stop loss, and risk/reward in beginner-friendly language.
+New to technical indicators and chart structures? Open the built-in `/learn` page after starting the app. It explains EMA, VWAP, RSI, MACD, Bollinger Bands, ATR, relative volume, OBV, support/resistance, Heikin-Ashi, stop loss, risk/reward, head and shoulders, flags, pennants, triangles, wedges, and double tops/bottoms in beginner-friendly language.
 
 ## Repository Layout
 
