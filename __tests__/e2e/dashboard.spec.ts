@@ -95,6 +95,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "축소" })).toBeVisible();
   await expect(page.getByRole("button", { name: "하이킨아시" })).toBeVisible();
   await expect(page.getByRole("button", { name: "타점 표시" })).toBeVisible();
+  await expect(page.locator(".signal .pattern-direction.long").first()).toBeVisible();
   await expect(page.locator(".watch-panel")).toBeInViewport();
   await expect(page.locator(".chart-panel")).toBeInViewport();
   await expect(page.locator(".side-stack")).toBeInViewport();
@@ -110,6 +111,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await page.getByRole("button", { name: "English" }).click();
   await expect(page.locator(".current-price")).toHaveText("$201.85");
   await expect(page.locator(".signal").getByText("Long bias")).toBeVisible();
+  await expect(page.locator(".signal").getByText("Long watch").first()).toBeVisible();
   await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();

@@ -796,6 +796,50 @@ dd {
   line-height: 1.45;
 }
 
+.pattern-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.pattern-token {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pattern-name {
+  overflow-wrap: anywhere;
+}
+
+.pattern-direction {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pattern-direction.long {
+  border: 1px solid rgba(79, 185, 159, 0.42);
+  background: rgba(79, 185, 159, 0.14);
+  color: #bdf6e8;
+}
+
+.pattern-direction.short {
+  border: 1px solid rgba(225, 95, 65, 0.42);
+  background: rgba(225, 95, 65, 0.14);
+  color: #ffb7a7;
+}
+
 .warning-list {
   margin-top: 14px;
   border: 1px solid rgba(215, 169, 59, 0.35);

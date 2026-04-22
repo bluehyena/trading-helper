@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppLocale, SignalResult } from "@trading-helper/core";
+import type { AppLocale, PatternDirection, SignalResult } from "@trading-helper/core";
 import { Activity, ShieldAlert, TrendingDown, TrendingUp } from "lucide-react";
 import { formatCurrency, formatDateTime } from "../lib/format";
 import type { UiMessages } from "../messages";
@@ -57,17 +57,27 @@ export function SignalCard({ locale, labels, signal }: SignalCardProps) {
       </dl>
       <div className="reason-list">
         {signal.patterns.length > 0 && (
-          <p>
-            {signal.patterns
-              .map((pattern) => pattern.label[locale])
-              .join(", ")}
+          <p className="pattern-summary">
+            {signal.patterns.map((pattern) => (
+              <span className="pattern-token" key={pattern.id}>
+                <span className="pattern-name">{pattern.label[locale]}</span>
+                <span className={`pattern-direction ${pattern.direction === "BULLISH" ? "long" : "short"}`}>
+                  {directionLabel(pattern.direction, locale)}
+                </span>
+              </span>
+            ))}
           </p>
         )}
         {signal.chartPatterns.length > 0 && (
-          <p>
-            {signal.chartPatterns
-              .map((pattern) => pattern.label[locale])
-              .join(", ")}
+          <p className="pattern-summary">
+            {signal.chartPatterns.map((pattern) => (
+              <span className="pattern-token" key={pattern.id}>
+                <span className="pattern-name">{pattern.label[locale]}</span>
+                <span className={`pattern-direction ${pattern.direction === "BULLISH" ? "long" : "short"}`}>
+                  {directionLabel(pattern.direction, locale)}
+                </span>
+              </span>
+            ))}
           </p>
         )}
         {signal.reasons.slice(0, 4).map((reason) => (
@@ -82,4 +92,12 @@ export function SignalCard({ locale, labels, signal }: SignalCardProps) {
       )}
     </section>
   );
+}
+
+function directionLabel(direction: PatternDirection, locale: AppLocale): string {
+  if (locale === "en") {
+    return direction === "BULLISH" ? "Long watch" : "Short watch";
+  }
+
+  return direction === "BULLISH" ? "롱 관찰" : "숏 관찰";
 }
