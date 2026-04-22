@@ -52,9 +52,29 @@ const indicatorCards = [
     en: "Recent reaction levels where price found support or resistance. Important for entries, targets, and invalidation."
   },
   {
+    key: "Pivot",
+    ko: "최근 고가/저가/종가를 기준으로 보는 중심 가격입니다. 가격이 피벗 위에서 버티는지, 아래로 밀리는지로 장중 힘의 균형을 참고합니다.",
+    en: "A central reference price from recent high, low, and close. It helps judge whether intraday pressure is holding above or below balance."
+  },
+  {
+    key: "Volume",
+    ko: "가격 움직임에 실제 참여가 붙는지 보는 기본 자료입니다. 돌파가 거래량 없이 나오면 속임수일 수 있고, 거래량 급증은 추격 리스크도 함께 키웁니다.",
+    en: "The base participation measure behind price movement. Breakouts without volume can be weak, while volume spikes can also increase chasing risk."
+  },
+  {
     key: "Heikin-Ashi",
     ko: "가격을 평균화한 캔들입니다. 노이즈를 줄여 추세를 보기 쉽지만 실제 체결 가격은 일반 캔들을 봐야 합니다.",
     en: "Averaged candles that smooth noise and clarify trend. Use regular candles for actual price levels."
+  },
+  {
+    key: "Regular Candles",
+    ko: "실제 시가/고가/저가/종가를 그대로 보여주는 기본 캔들입니다. 타점, 손절, 목표가는 일반 캔들의 실제 가격을 기준으로 봐야 합니다.",
+    en: "The raw open, high, low, and close candles. Entries, stops, and targets should be checked against regular candle prices."
+  },
+  {
+    key: "Trade Plan Overlay",
+    ko: "차트 위에 진입 관찰 구간, 무효화/스탑, 1R/2R 목표선을 표시합니다. 신호가 아니라 계획이 어느 가격에서 깨지는지 보는 도구입니다.",
+    en: "Chart lines for entry watch, invalidation/stop, and 1R/2R targets. It visualizes where the idea works or fails."
   },
   {
     key: "Stop Loss",
@@ -65,6 +85,70 @@ const indicatorCards = [
     key: "Risk / Reward",
     ko: "감수하는 위험 대비 기대 보상입니다. 예: 2R은 위험 1만큼을 걸어 보상 2를 기대한다는 뜻입니다.",
     en: "Expected reward relative to risk. For example, 2R means targeting twice the amount being risked."
+  },
+  {
+    key: "Data Staleness",
+    ko: "무료 공개 데이터는 지연되거나 누락될 수 있습니다. 단타에서는 데이터 시간이 오래될수록 신호 신뢰도를 낮춰 봐야 합니다.",
+    en: "Free public data can be delayed or incomplete. For short-term trading, older data should lower confidence."
+  }
+] as const;
+
+const candlestickPatternCards = [
+  {
+    key: "bullish_engulfing",
+    title: { ko: "상승 장악형", en: "Bullish Engulfing" },
+    direction: { ko: "롱 관찰", en: "Long watch" },
+    ko: "작은 음봉 뒤에 강한 양봉이 이전 몸통을 감싸면 매수 반전 후보로 봅니다. 저점권이나 지지 부근에서 더 의미가 커집니다.",
+    en: "A strong bullish body engulfs the prior bearish body. It is more meaningful near support or after a downside move."
+  },
+  {
+    key: "hammer",
+    title: { ko: "망치형", en: "Hammer" },
+    direction: { ko: "롱 관찰", en: "Long watch" },
+    ko: "긴 아래꼬리와 작은 몸통이 보이면 아래 가격을 밀어낸 흔적으로 봅니다. 하락 뒤 지지 확인과 거래량이 함께 필요합니다.",
+    en: "A long lower wick and small body suggest downside rejection. It needs support context and participation confirmation."
+  },
+  {
+    key: "morning_star",
+    title: { ko: "샛별형", en: "Morning Star" },
+    direction: { ko: "롱 관찰", en: "Long watch" },
+    ko: "하락 캔들, 작은 망설임 캔들, 강한 회복 양봉이 이어지는 3봉 반전 후보입니다. 세 번째 캔들의 회복 강도가 중요합니다.",
+    en: "A three-candle bullish reversal candidate: selloff, indecision, then strong recovery. The third candle's recovery matters."
+  },
+  {
+    key: "three_white_soldiers",
+    title: { ko: "적삼병", en: "Three White Soldiers" },
+    direction: { ko: "롱 관찰", en: "Long watch" },
+    ko: "연속된 세 개의 강한 양봉입니다. 매수 참여가 이어진다는 뜻이지만 이미 많이 뻗은 자리라면 추격 리스크도 봐야 합니다.",
+    en: "Three consecutive bullish candles show sustained buying pressure, but a stretched move can carry chasing risk."
+  },
+  {
+    key: "bearish_engulfing",
+    title: { ko: "하락 장악형", en: "Bearish Engulfing" },
+    direction: { ko: "숏 관찰", en: "Short watch" },
+    ko: "작은 양봉 뒤에 강한 음봉이 이전 몸통을 감싸면 매도 반전 후보로 봅니다. 고점권이나 저항 부근에서 더 조심합니다.",
+    en: "A strong bearish body engulfs the prior bullish body. It is more important near resistance or after an extended advance."
+  },
+  {
+    key: "shooting_star",
+    title: { ko: "유성형", en: "Shooting Star" },
+    direction: { ko: "숏 관찰", en: "Short watch" },
+    ko: "긴 위꼬리와 작은 몸통이 보이면 위 가격을 받아주지 못한 흔적으로 봅니다. 저항과 다음 캔들의 약세 확인이 중요합니다.",
+    en: "A long upper wick and small body suggest upside rejection. Resistance context and the next candle's weakness matter."
+  },
+  {
+    key: "evening_star",
+    title: { ko: "석별형", en: "Evening Star" },
+    direction: { ko: "숏 관찰", en: "Short watch" },
+    ko: "상승 캔들, 작은 망설임 캔들, 강한 하락 음봉이 이어지는 3봉 반전 후보입니다. 고점권에서 더 의미가 큽니다.",
+    en: "A three-candle bearish reversal candidate: advance, indecision, then strong drop. It matters more near highs."
+  },
+  {
+    key: "three_black_crows",
+    title: { ko: "흑삼병", en: "Three Black Crows" },
+    direction: { ko: "숏 관찰", en: "Short watch" },
+    ko: "연속된 세 개의 강한 음봉입니다. 매도 압력이 이어진다는 뜻이지만 과매도 자리에서는 늦은 숏 추격을 경계합니다.",
+    en: "Three consecutive bearish candles show sustained selling pressure, but late shorts can be risky after an oversold move."
   }
 ] as const;
 
@@ -149,7 +233,46 @@ const chartPatternCards = [
   }
 ] as const;
 
+const flowResourceCards = [
+  {
+    key: "pressure-proxy",
+    title: { ko: "장중 매수세 프록시", en: "Intraday Demand Proxies" },
+    ko: "무료 데이터만으로 기관 주문을 직접 볼 수는 없습니다. 대신 상대거래량, VWAP 위/아래, OBV 방향, 종가 위치, 돌파 거래량을 묶어 참여 강도를 추정합니다.",
+    en: "Free data cannot directly identify institutional orders. Use relative volume, VWAP position, OBV direction, close location, and breakout volume as participation proxies.",
+    href: "https://www.investor.gov/introduction-investing/investing-basics/glossary/short-sale-volume-and-transaction-data"
+  },
+  {
+    key: "finra-short-volume",
+    title: { ko: "FINRA 일별 공매도 거래량", en: "FINRA Daily Short Sale Volume" },
+    ko: "당일 정규장 중 TRF/ADF/ORF에 보고된 공매도 거래량 집계입니다. 보통 당일 18:00 ET까지 게시되며, 이것은 공매도잔량이 아니라 거래량 데이터입니다.",
+    en: "Aggregated short-sale volume reported to TRF/ADF/ORF during regular hours. It is generally posted by 6:00 p.m. ET and is volume, not short interest.",
+    href: "https://www.finra.org/finra-data/browse-catalog/short-sale-volume-data/daily-short-sale-volume-files"
+  },
+  {
+    key: "nasdaq-short-interest",
+    title: { ko: "Nasdaq 공매도잔량", en: "Nasdaq Short Interest" },
+    ko: "공매도잔량은 특정 결제일 기준 포지션 데이터라 단타용 실시간 지표가 아닙니다. 반월 단위로 공개·배포되며 숏 스퀴즈 리스크를 보는 보조 자료입니다.",
+    en: "Short interest is position data for settlement dates, not a real-time scalping feed. It is a delayed context input for squeeze and crowding risk.",
+    href: "https://www.nasdaq.com/solutions/data/equities/short-interest"
+  },
+  {
+    key: "sec-13f",
+    title: { ko: "SEC 13F 기관 보유", en: "SEC 13F Institutional Holdings" },
+    ko: "대형 운용사의 보유 종목을 분기 단위로 보는 자료입니다. 단타 타점보다는 중장기 기관 관심과 보유 변화 확인에 적합합니다.",
+    en: "Quarterly holdings from large investment managers. Useful for institutional interest context, not intraday entries.",
+    href: "https://www.sec.gov/data-research/sec-markets-data/form-13f-data-sets"
+  },
+  {
+    key: "sec-ftd",
+    title: { ko: "SEC Fails-to-Deliver", en: "SEC Fails-to-Deliver" },
+    ko: "결제 실패 잔량을 월 2회 공개합니다. 숏과 관련될 수 있지만 반드시 공매도나 불법 공매도의 증거는 아니므로 과해석하면 안 됩니다.",
+    en: "Twice-monthly settlement fail balances. They can be related to shorts, but are not proof of short selling or abusive naked shorting.",
+    href: "https://www.sec.gov/data-research/sec-markets-data/fails-deliver-data"
+  }
+] as const;
+
 type ChartPatternKey = (typeof chartPatternCards)[number]["key"];
+type CandlestickPatternKey = (typeof candlestickPatternCards)[number]["key"];
 
 export default function LearnPage() {
   const [locale, setLocale] = useState<AppLocale>("ko");
@@ -204,6 +327,22 @@ export default function LearnPage() {
         ))}
       </section>
       <section className="learn-section-title">
+        <p className="eyebrow">{isEnglish ? "Candlestick Patterns" : "캔들 패턴"}</p>
+        <h2>{isEnglish ? "Signal Card Candle Shapes" : "Signal 카드에 뜨는 캔들 모양"}</h2>
+      </section>
+      <section className="learn-grid">
+        {candlestickPatternCards.map((card) => (
+          <article key={card.key} className="learn-card pattern-card">
+            <CandlestickPatternDiagram patternKey={card.key} title={card.title[locale]} />
+            <h2>{card.title[locale]}</h2>
+            <span className={card.direction.en === "Long watch" ? "learn-direction long" : "learn-direction short"}>
+              {card.direction[locale]}
+            </span>
+            <p>{isEnglish ? card.en : card.ko}</p>
+          </article>
+        ))}
+      </section>
+      <section className="learn-section-title">
         <p className="eyebrow">{isEnglish ? "Chart Patterns" : "차트 형태"}</p>
         <h2>{isEnglish ? "Market Structure Setups" : "시장 구조 셋업"}</h2>
       </section>
@@ -216,8 +355,96 @@ export default function LearnPage() {
           </article>
         ))}
       </section>
+      <section className="learn-section-title">
+        <p className="eyebrow">{isEnglish ? "Flow Data" : "수급/공매도 자료"}</p>
+        <h2>{isEnglish ? "What Can Help With Chase Risk" : "추격매수 전에 같이 볼 자료"}</h2>
+      </section>
+      <section className="learn-grid">
+        {flowResourceCards.map((card) => (
+          <article key={card.key} className="learn-card">
+            <BookOpen size={20} aria-hidden />
+            <h2>{card.title[locale]}</h2>
+            <p>{isEnglish ? card.en : card.ko}</p>
+            <a className="source-link" href={card.href} target="_blank" rel="noreferrer">
+              {isEnglish ? "Official source" : "공식 자료"}
+            </a>
+          </article>
+        ))}
+      </section>
     </main>
   );
+}
+
+function CandlestickPatternDiagram({ patternKey, title }: { patternKey: CandlestickPatternKey; title: string }) {
+  const candles = candlestickShapes(patternKey);
+
+  return (
+    <svg className="pattern-diagram candle-diagram" viewBox="0 0 220 118" role="img" aria-label={title}>
+      <rect x="1" y="1" width="218" height="116" rx="8" />
+      <line className="baseline" x1="18" y1="92" x2="202" y2="92" />
+      {candles.map((candle) => {
+        const bodyY = Math.min(candle.open, candle.close);
+        const bodyHeight = Math.max(Math.abs(candle.open - candle.close), 6);
+
+        return (
+          <g className={`candle ${candle.kind}`} key={`${patternKey}-${candle.x}`}>
+            <line x1={candle.x} y1={candle.high} x2={candle.x} y2={candle.low} />
+            <rect x={candle.x - 10} y={bodyY} width="20" height={bodyHeight} rx="3" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function candlestickShapes(
+  patternKey: CandlestickPatternKey
+): Array<{ x: number; open: number; close: number; high: number; low: number; kind: "bullish" | "bearish" | "neutral" }> {
+  const shapes: Record<
+    CandlestickPatternKey,
+    Array<{ x: number; open: number; close: number; high: number; low: number; kind: "bullish" | "bearish" | "neutral" }>
+  > = {
+    bullish_engulfing: [
+      { x: 82, open: 48, close: 72, high: 42, low: 78, kind: "bearish" },
+      { x: 126, open: 82, close: 34, high: 28, low: 88, kind: "bullish" }
+    ],
+    hammer: [
+      { x: 70, open: 42, close: 66, high: 36, low: 72, kind: "bearish" },
+      { x: 110, open: 58, close: 70, high: 52, low: 76, kind: "bearish" },
+      { x: 150, open: 72, close: 60, high: 54, low: 102, kind: "bullish" }
+    ],
+    morning_star: [
+      { x: 66, open: 36, close: 76, high: 30, low: 82, kind: "bearish" },
+      { x: 110, open: 78, close: 72, high: 66, low: 88, kind: "neutral" },
+      { x: 154, open: 70, close: 34, high: 30, low: 76, kind: "bullish" }
+    ],
+    three_white_soldiers: [
+      { x: 68, open: 78, close: 56, high: 50, low: 84, kind: "bullish" },
+      { x: 110, open: 62, close: 40, high: 34, low: 68, kind: "bullish" },
+      { x: 152, open: 46, close: 24, high: 18, low: 52, kind: "bullish" }
+    ],
+    bearish_engulfing: [
+      { x: 82, open: 70, close: 46, high: 40, low: 76, kind: "bullish" },
+      { x: 126, open: 36, close: 84, high: 30, low: 90, kind: "bearish" }
+    ],
+    shooting_star: [
+      { x: 70, open: 76, close: 52, high: 46, low: 82, kind: "bullish" },
+      { x: 110, open: 56, close: 42, high: 36, low: 64, kind: "bullish" },
+      { x: 150, open: 48, close: 58, high: 14, low: 66, kind: "bearish" }
+    ],
+    evening_star: [
+      { x: 66, open: 76, close: 36, high: 30, low: 82, kind: "bullish" },
+      { x: 110, open: 36, close: 42, high: 28, low: 52, kind: "neutral" },
+      { x: 154, open: 44, close: 82, high: 38, low: 88, kind: "bearish" }
+    ],
+    three_black_crows: [
+      { x: 68, open: 30, close: 52, high: 24, low: 58, kind: "bearish" },
+      { x: 110, open: 46, close: 68, high: 40, low: 74, kind: "bearish" },
+      { x: 152, open: 62, close: 86, high: 56, low: 92, kind: "bearish" }
+    ]
+  };
+
+  return shapes[patternKey];
 }
 
 function PatternDiagram({ patternKey, title }: { patternKey: ChartPatternKey; title: string }) {

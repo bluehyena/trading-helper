@@ -35,13 +35,21 @@ function buildKoreanAnswer(request: AiChatRequest, latestQuestion: string): stri
     signal.chartPatterns.length > 0
       ? `\n\n차트 형태:\n${signal.chartPatterns.map((pattern) => `- ${pattern.label.ko}: ${pattern.description.ko}`).join("\n")}`
       : "";
+  const candlePatterns =
+    signal.patterns.length > 0
+      ? `\n\n캔들 패턴:\n${signal.patterns.map((pattern) => `- ${pattern.label.ko}: ${pattern.description.ko}`).join("\n")}`
+      : "";
+  const flowCaveat =
+    /기관|수급|공매도|잔량|short|interest|13f|ftd/i.test(latestQuestion)
+      ? "\n\n수급 참고: 무료 데이터만으로 기관 주문을 실시간 식별할 수는 없습니다. 상대거래량, VWAP, OBV는 참여 강도 프록시이며 FINRA 공매도 거래량, Nasdaq 공매도잔량, SEC 13F/FTD는 지연 공개자료입니다."
+      : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\n주문 실행이나 확정적인 매수/매도 지시는 제공하지 않습니다. 아래 내용은 분석 보조입니다."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}${chartPatterns}\n\n주의:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\n근거:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}\n\n주의:\n${warnings}${executionRefusal}`;
 }
 
 function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): string {
@@ -61,13 +69,21 @@ function buildEnglishAnswer(request: AiChatRequest, latestQuestion: string): str
     signal.chartPatterns.length > 0
       ? `\n\nChart patterns:\n${signal.chartPatterns.map((pattern) => `- ${pattern.label.en}: ${pattern.description.en}`).join("\n")}`
       : "";
+  const candlePatterns =
+    signal.patterns.length > 0
+      ? `\n\nCandlestick patterns:\n${signal.patterns.map((pattern) => `- ${pattern.label.en}: ${pattern.description.en}`).join("\n")}`
+      : "";
+  const flowCaveat =
+    /기관|수급|공매도|잔량|short|interest|13f|ftd|institution/i.test(latestQuestion)
+      ? "\n\nFlow context: free data cannot identify institutional orders in real time. Relative volume, VWAP, and OBV are participation proxies, while FINRA short-sale volume, Nasdaq short interest, and SEC 13F/FTD are delayed public data."
+      : "";
   const warnings = signal.warnings.map((warning) => `- ${warning}`).join("\n");
   const executionRefusal =
     /주문|매수해|매도해|buy|sell|order|execute/i.test(latestQuestion)
       ? "\n\nI cannot execute orders or give a certain buy/sell instruction. This is analysis-only context."
       : "";
 
-  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}${chartPatterns}\n\nWarnings:\n${warnings}${executionRefusal}`;
+  return `${header}\n${quoteLine}\n${plan}\n\nReasons:\n${reasons}${candlePatterns}${chartPatterns}${flowCaveat}\n\nWarnings:\n${warnings}${executionRefusal}`;
 }
 
 function toKoreanBias(bias: string): string {

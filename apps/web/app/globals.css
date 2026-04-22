@@ -840,6 +840,102 @@ dd {
   color: #ffb7a7;
 }
 
+.flow-panel {
+  display: grid;
+  align-content: start;
+}
+
+.flow-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.flow-badge.long {
+  border: 1px solid rgba(79, 185, 159, 0.42);
+  background: rgba(79, 185, 159, 0.14);
+  color: #bdf6e8;
+}
+
+.flow-badge.short {
+  border: 1px solid rgba(225, 95, 65, 0.42);
+  background: rgba(225, 95, 65, 0.14);
+  color: #ffb7a7;
+}
+
+.flow-badge.neutral {
+  border: 1px solid rgba(167, 161, 149, 0.32);
+  background: rgba(167, 161, 149, 0.09);
+  color: var(--muted);
+}
+
+.flow-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.flow-grid dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flow-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.flow-dot.long {
+  background: var(--teal);
+}
+
+.flow-dot.short {
+  background: var(--red);
+}
+
+.flow-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.flow-resources p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.flow-resources a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #bdf6e8;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .warning-list {
   margin-top: 14px;
   border: 1px solid rgba(215, 169, 59, 0.35);
@@ -1023,6 +1119,42 @@ dd {
   line-height: 1.55;
 }
 
+.learn-direction {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  margin: 0 0 9px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.learn-direction.long {
+  border: 1px solid rgba(79, 185, 159, 0.42);
+  background: rgba(79, 185, 159, 0.14);
+  color: #bdf6e8;
+}
+
+.learn-direction.short {
+  border: 1px solid rgba(225, 95, 65, 0.42);
+  background: rgba(225, 95, 65, 0.14);
+  color: #ffb7a7;
+}
+
+.source-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  margin-top: 12px;
+  border-bottom: 1px solid rgba(79, 185, 159, 0.55);
+  color: #bdf6e8;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .pattern-card {
   min-height: 292px;
 }
@@ -1051,6 +1183,40 @@ dd {
   stroke-width: 5;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.candle-diagram .baseline {
+  stroke: rgba(167, 161, 149, 0.24);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.candle-diagram .candle line {
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: none;
+}
+
+.candle-diagram .candle rect {
+  stroke-width: 2;
+}
+
+.candle-diagram .bullish line,
+.candle-diagram .bullish rect {
+  fill: var(--teal);
+  stroke: var(--teal);
+}
+
+.candle-diagram .bearish line,
+.candle-diagram .bearish rect {
+  fill: var(--red);
+  stroke: var(--red);
+}
+
+.candle-diagram .neutral line,
+.candle-diagram .neutral rect {
+  fill: var(--amber);
+  stroke: var(--amber);
 }
 
 @media (min-width: 1181px) {
@@ -1252,8 +1418,8 @@ dd {
   }
 
   .side-stack {
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
+    grid-template-rows: minmax(0, 1.05fr) minmax(0, 0.95fr) minmax(0, 0.88fr);
+    gap: 8px;
   }
 
   .side-stack .panel {
@@ -1312,6 +1478,32 @@ dd {
   .warning-list {
     margin-top: 9px;
     padding: 7px;
+  }
+
+  .flow-note {
+    margin-bottom: 7px;
+    font-size: 11px;
+    line-height: 1.32;
+  }
+
+  .flow-grid {
+    gap: 6px;
+  }
+
+  .flow-badge {
+    min-height: 24px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .flow-resources {
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  .flow-resources a {
+    padding: 4px 7px;
+    font-size: 10px;
   }
 
   .ai-panel {

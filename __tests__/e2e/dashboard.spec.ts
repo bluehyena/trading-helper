@@ -96,6 +96,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("button", { name: "하이킨아시" })).toBeVisible();
   await expect(page.getByRole("button", { name: "타점 표시" })).toBeVisible();
   await expect(page.locator(".signal .pattern-direction.long").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "수급 체크" })).toBeVisible();
+  await expect(page.getByText("수요 우세")).toBeVisible();
   await expect(page.locator(".watch-panel")).toBeInViewport();
   await expect(page.locator(".chart-panel")).toBeInViewport();
   await expect(page.locator(".side-stack")).toBeInViewport();
@@ -112,18 +114,22 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.locator(".current-price")).toHaveText("$201.85");
   await expect(page.locator(".signal").getByText("Long bias")).toBeVisible();
   await expect(page.locator(".signal").getByText("Long watch").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Demand Check" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();
   await page.getByRole("link", { name: "Learn" }).click();
   await expect(page.getByRole("heading", { name: "Indicator & Chart Pattern Guide" })).toBeVisible();
   await expect(page.getByText("Heikin-Ashi")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hammer", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hammer", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Head and Shoulders", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Bull Flag", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await expect(page.getByRole("heading", { name: "Double Bottom" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "FINRA Daily Short Sale Volume" })).toBeVisible();
   await page.getByRole("link", { name: "Dashboard" }).click();
 
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");

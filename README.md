@@ -121,7 +121,7 @@ Trading Helper is deliberately analysis-only. The assistant can explain setups, 
 
 ## Learn the Indicators
 
-New to technical indicators and chart structures? Open the built-in `/learn` page after starting the app. It explains EMA, VWAP, RSI, MACD, Bollinger Bands, ATR, relative volume, OBV, support/resistance, Heikin-Ashi, stop loss, risk/reward, head and shoulders, flags, pennants, triangles, wedges, and double tops/bottoms in beginner-friendly language.
+New to technical indicators and chart structures? Open the built-in `/learn` page after starting the app. It explains every dashboard indicator, regular and Heikin-Ashi candles, trade-plan overlays, candlestick patterns such as hammer/shooting star/engulfing/star patterns, chart structures such as head and shoulders, flags, pennants, triangles, wedges, double tops/bottoms, and delayed public flow data such as FINRA short-sale volume, Nasdaq short interest, SEC 13F, and SEC fails-to-deliver.
 
 ## Repository Layout
 
