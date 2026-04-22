@@ -1,5 +1,6 @@
 import { clamp, indicatorSnapshot, round } from "../indicators";
 import type { AppLocale, Candle, IndicatorSnapshot, SignalBias, SignalResult, Timeframe } from "../types";
+import { detectCandlestickPatterns } from "./patterns";
 import { isDataStale, minutesSinceLatestCandle } from "./staleness";
 
 interface AnalyzeSignalInput {
@@ -74,6 +75,7 @@ export function analyzeSignal({
   const indicators = indicatorSnapshot(candles);
   const latest = candles.at(-1);
   const previous = candles.at(-2);
+  const patterns = detectCandlestickPatterns(candles);
   const reasons: string[] = [];
   const warnings: string[] = [copy.analysisOnly as string];
 
@@ -90,6 +92,7 @@ export function analyzeSignal({
       reasons: [copy.noCandles as string],
       warnings,
       indicators,
+      patterns,
       dataTimestamp: now.toISOString(),
       source
     };
@@ -190,6 +193,16 @@ export function analyzeSignal({
     reasons.push(copy.nearResistance as string);
   }
 
+  for (const pattern of patterns) {
+    if (pattern.direction === "BULLISH") {
+      score += pattern.strength === "HIGH" ? 0.7 : 0.35;
+      reasons.push(locale === "en" ? `${pattern.label.en} pattern detected.` : `${pattern.label.ko} 패턴이 감지됐습니다.`);
+    } else {
+      score -= pattern.strength === "HIGH" ? 0.7 : 0.35;
+      reasons.push(locale === "en" ? `${pattern.label.en} pattern detected.` : `${pattern.label.ko} 패턴이 감지됐습니다.`);
+    }
+  }
+
   const bias = score >= 2.2 ? "LONG" : score <= -2.2 ? "SHORT" : "NEUTRAL";
   const confidence = confidenceFromScore(score, warnings.length, bias);
   const tradePlan = buildTradePlan(bias, close, atr, indicators.support, indicators.resistance);
@@ -206,6 +219,7 @@ export function analyzeSignal({
     reasons: reasons.length > 0 ? reasons : [copy.noEdge as string],
     warnings,
     indicators: roundIndicators(indicators),
+    patterns,
     dataTimestamp: latest.time,
     source
   };

@@ -1,8 +1,14 @@
-export type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d";
+export type Timeframe = "1m" | "5m" | "15m" | "30m" | "1h" | "1d" | "1w" | "1mo";
 
 export type SignalBias = "LONG" | "SHORT" | "NEUTRAL";
 
 export type AppLocale = "ko" | "en";
+
+export type CandleStyle = "regular" | "heikin_ashi";
+
+export type PatternDirection = "BULLISH" | "BEARISH";
+
+export type PatternStrength = "LOW" | "MEDIUM" | "HIGH";
 
 export interface Candle {
   timestamp: number;
@@ -81,6 +87,28 @@ export interface SignalTarget {
   price: number;
 }
 
+export interface PatternSignal {
+  id:
+    | "bullish_engulfing"
+    | "hammer"
+    | "morning_star"
+    | "three_white_soldiers"
+    | "bearish_engulfing"
+    | "shooting_star"
+    | "evening_star"
+    | "three_black_crows";
+  direction: PatternDirection;
+  strength: PatternStrength;
+  label: {
+    ko: string;
+    en: string;
+  };
+  description: {
+    ko: string;
+    en: string;
+  };
+}
+
 export interface SignalResult {
   symbol: string;
   timeframe: Timeframe;
@@ -93,6 +121,35 @@ export interface SignalResult {
   reasons: string[];
   warnings: string[];
   indicators: IndicatorSnapshot;
+  patterns: PatternSignal[];
   dataTimestamp: string;
   source: string;
+}
+
+export interface FavoriteSymbol {
+  symbol: string;
+  name?: string;
+  addedAt: string;
+}
+
+export interface ScannerRankReason {
+  label: string;
+  weight: number;
+}
+
+export interface ScannerResult {
+  symbol: string;
+  timeframe: Timeframe;
+  price: number;
+  bias: SignalBias;
+  confidence: number;
+  score: number;
+  entryZone: PriceZone | null;
+  invalidation: number | null;
+  targets: SignalTarget[];
+  keyReason: string;
+  dataAgeMinutes: number | null;
+  patterns: PatternSignal[];
+  rankReasons: ScannerRankReason[];
+  signal: SignalResult;
 }
