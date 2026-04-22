@@ -556,7 +556,7 @@ button:disabled {
 
 .overlay-label {
   fill: var(--text);
-  font-size: 11px;
+  font-size: 13px;
   paint-order: stroke;
   stroke: #11110d;
   stroke-width: 3px;
@@ -579,10 +579,33 @@ button:disabled {
 
 .pattern-label {
   fill: #f3d88f;
-  font-size: 11px;
+  font-size: 13px;
   paint-order: stroke;
   stroke: #11110d;
   stroke-width: 3px;
+}
+
+.crosshair-line {
+  stroke: rgba(243, 240, 232, 0.58);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.crosshair-box {
+  fill: rgba(17, 17, 13, 0.94);
+  stroke: rgba(243, 240, 232, 0.28);
+  stroke-width: 1;
+}
+
+.crosshair-price {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.crosshair-text {
+  fill: var(--muted);
+  font-size: 12px;
 }
 
 .grid-line {
@@ -592,7 +615,7 @@ button:disabled {
 
 .axis-text {
   fill: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .candle line {
@@ -938,12 +961,6 @@ dd {
 }
 
 @media (min-width: 1181px) {
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
-  }
-
   .app-shell {
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr);

@@ -100,6 +100,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.locator(".side-stack")).toBeInViewport();
   await expect(page.locator(".ai-panel")).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+  await page.locator(".chart").hover({ position: { x: 420, y: 180 } });
+  await expect(page.locator(".crosshair-tooltip")).toBeVisible();
   await page.getByRole("button", { name: "즐겨찾기 스캔" }).click();
   await expect(page.getByText("점수 91.4")).toBeVisible();
   await expect(page.getByText("패턴: 상승 장악형")).toBeVisible();
@@ -115,6 +117,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("heading", { name: "Indicator & Chart Pattern Guide" })).toBeVisible();
   await expect(page.getByText("Heikin-Ashi")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(page.getByRole("heading", { name: "Double Top / Bottom" })).toBeVisible();
   await page.getByRole("link", { name: "Dashboard" }).click();
 
   await page.getByPlaceholder("Ask about the current setup").fill("Why long?");
