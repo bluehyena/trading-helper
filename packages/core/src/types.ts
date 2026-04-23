@@ -6,6 +6,12 @@ export type AppLocale = "ko" | "en";
 
 export type CandleStyle = "regular" | "heikin_ashi";
 
+export type TradingHorizon = "scalp" | "swing";
+
+export type MovingAverageKind = "ema" | "sma";
+
+export type MovingAveragePeriod = 9 | 21 | 50 | 200;
+
 export type PatternDirection = "BULLISH" | "BEARISH";
 
 export type PatternStrength = "LOW" | "MEDIUM" | "HIGH";
@@ -109,6 +115,10 @@ export interface IndicatorSnapshot {
   ema21: number | null;
   ema50: number | null;
   ema200: number | null;
+  sma9: number | null;
+  sma21: number | null;
+  sma50: number | null;
+  sma200: number | null;
   rsi14: number | null;
   macd: number | null;
   macdSignal: number | null;
@@ -190,6 +200,7 @@ export interface ChartPatternSignal {
 export interface SignalResult {
   symbol: string;
   timeframe: Timeframe;
+  horizon: TradingHorizon;
   bias: SignalBias;
   confidence: number;
   entryZone: PriceZone | null;
@@ -219,6 +230,7 @@ export interface ScannerRankReason {
 export interface ScannerResult {
   symbol: string;
   timeframe: Timeframe;
+  horizon: TradingHorizon;
   price: number;
   bias: SignalBias;
   confidence: number;
@@ -232,4 +244,157 @@ export interface ScannerResult {
   chartPatterns: ChartPatternSignal[];
   rankReasons: ScannerRankReason[];
   signal: SignalResult;
+}
+
+export interface ShortInterestRecord {
+  symbol: string;
+  settlementDate: string;
+  shortInterest: number | null;
+  averageDailyVolume: number | null;
+  daysToCover: number | null;
+  source: string;
+}
+
+export interface ShortSaleVolumeRecord {
+  symbol: string;
+  date: string;
+  shortVolume: number | null;
+  totalVolume: number | null;
+  shortExemptVolume: number | null;
+  shortVolumeRatio: number | null;
+  source: string;
+}
+
+export interface FailsToDeliverRecord {
+  symbol: string;
+  settlementDate: string;
+  quantity: number | null;
+  price: number | null;
+  source: string;
+}
+
+export interface ShortFlowSnapshot {
+  symbol: string;
+  shortInterest: ShortInterestRecord | null;
+  shortSaleVolume: ShortSaleVolumeRecord | null;
+  failsToDeliver: FailsToDeliverRecord | null;
+  warnings: string[];
+  dataTimestamp: string;
+  source: string;
+}
+
+export interface MarketMoodSnapshot {
+  score: number;
+  label: {
+    ko: string;
+    en: string;
+  };
+  vix: number | null;
+  putCallRatio: number | null;
+  spyTrend: SignalBias;
+  qqqTrend: SignalBias;
+  warnings: string[];
+  dataTimestamp: string;
+  source: string;
+}
+
+export type AiActionProposal =
+  | {
+      id: string;
+      type: "add_favorite" | "remove_favorite" | "set_symbol";
+      symbol: string;
+      label: {
+        ko: string;
+        en: string;
+      };
+    }
+  | {
+      id: string;
+      type: "set_timeframe";
+      timeframe: Timeframe;
+      label: {
+        ko: string;
+        en: string;
+      };
+    }
+  | {
+      id: string;
+      type: "set_horizon";
+      horizon: TradingHorizon;
+      label: {
+        ko: string;
+        en: string;
+      };
+    }
+  | {
+      id: string;
+      type: "run_agent_scan";
+      horizon: TradingHorizon;
+      label: {
+        ko: string;
+        en: string;
+      };
+    };
+
+export interface AgentReport {
+  title: string;
+  summary: string;
+  warnings: string[];
+  generatedAt: string;
+}
+
+export interface AgentScanResult {
+  horizon: TradingHorizon;
+  candidates: ScannerResult[];
+  report: AgentReport;
+  proposedFavorites: string[];
+  mood: MarketMoodSnapshot;
+}
+
+export interface ChartPreferences {
+  candleStyle: CandleStyle;
+  showOverlays: boolean;
+  movingAverageKind: MovingAverageKind;
+  movingAveragePeriods: Record<MovingAveragePeriod, boolean>;
+  vwap: boolean;
+  bollinger: boolean;
+}
+
+export interface CalculatorDefaults {
+  principal: number;
+  feePercent: number;
+  taxPercent: number;
+  entryPrice: number;
+  takeProfitPrice: number;
+  stopLossPrice: number;
+  direction: "long" | "short";
+}
+
+export interface UserState {
+  locale: AppLocale;
+  favorites: string[];
+  lastSymbol: string;
+  timeframe: Timeframe;
+  horizon: TradingHorizon;
+  chart: ChartPreferences;
+  calculator: CalculatorDefaults;
+  updatedAt: string;
+}
+
+export interface TradeReturnInput extends CalculatorDefaults {}
+
+export interface TradeReturnScenario {
+  exitPrice: number;
+  gross: number;
+  fees: number;
+  taxes: number;
+  net: number;
+  roiPercent: number;
+}
+
+export interface TradeReturnResult {
+  shares: number;
+  takeProfit: TradeReturnScenario;
+  stopLoss: TradeReturnScenario;
+  breakEvenPrice: number;
 }

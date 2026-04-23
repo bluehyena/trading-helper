@@ -1,4 +1,12 @@
-import type { AppLocale, RealtimeTradeDirection, SignalResult, Timeframe } from "@trading-helper/core";
+import type {
+  AppLocale,
+  MarketMoodSnapshot,
+  RealtimeTradeDirection,
+  ShortFlowSnapshot,
+  SignalResult,
+  Timeframe,
+  TradingHorizon
+} from "@trading-helper/core";
 
 export type AiProviderName = "openai" | "gemini" | "local";
 
@@ -9,6 +17,7 @@ export interface ChatMessage {
 
 export interface MarketContext {
   symbol: string;
+  horizon?: TradingHorizon;
   quote?: {
     price: number;
     change: number;
@@ -17,6 +26,8 @@ export interface MarketContext {
     timestamp: string;
   };
   signal: SignalResult;
+  shortFlow?: ShortFlowSnapshot | null;
+  marketMood?: MarketMoodSnapshot | null;
   realtime?: {
     enabled: boolean;
     timeframe: Timeframe;

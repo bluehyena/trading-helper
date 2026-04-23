@@ -22,8 +22,11 @@ export function serializeMarketContext(request: AiChatRequest): string {
   return JSON.stringify(
     {
       symbol: request.marketContext.symbol,
+      horizon: request.marketContext.horizon,
       quote: request.marketContext.quote,
-      signal: request.marketContext.signal
+      signal: request.marketContext.signal,
+      shortFlow: request.marketContext.shortFlow,
+      marketMood: request.marketContext.marketMood
     },
     null,
     2

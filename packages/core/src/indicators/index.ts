@@ -1,5 +1,5 @@
 import type { Candle, IndicatorSnapshot } from "../types";
-import { bollingerBands, ema, macd, rsi, vwap } from "./trend";
+import { bollingerBands, ema, macd, rsi, sma, vwap } from "./trend";
 import { lastDefined } from "./math";
 import { obv, relativeVolume, atr } from "./volatility";
 import { pivotLevels } from "./pivots";
@@ -20,6 +20,10 @@ export function indicatorSnapshot(candles: Candle[]): IndicatorSnapshot {
     ema21: lastDefined(ema(closes, 21)),
     ema50: lastDefined(ema(closes, 50)),
     ema200: lastDefined(ema(closes, 200)),
+    sma9: lastDefined(sma(closes, 9)),
+    sma21: lastDefined(sma(closes, 21)),
+    sma50: lastDefined(sma(closes, 50)),
+    sma200: lastDefined(sma(closes, 200)),
     rsi14: lastDefined(rsi(closes, 14)),
     macd: lastDefined(macdPoints.map((point) => point.macd)),
     macdSignal: lastDefined(macdPoints.map((point) => point.signal)),

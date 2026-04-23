@@ -2,6 +2,10 @@ import type { Candle } from "../types";
 import { average, standardDeviation } from "./math";
 
 export function sma(values: number[], period: number): Array<number | null> {
+  if (period <= 0) {
+    throw new Error("SMA period must be positive.");
+  }
+
   return values.map((_, index) => {
     if (index + 1 < period) {
       return null;

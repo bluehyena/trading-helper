@@ -1,4 +1,4 @@
-import type { AppLocale, Candle, ScannerRankReason, ScannerResult, SignalResult, Timeframe } from "../types";
+import type { AppLocale, Candle, ScannerRankReason, ScannerResult, SignalResult, Timeframe, TradingHorizon } from "../types";
 import { round } from "../indicators";
 import { minutesSinceLatestCandle } from "./staleness";
 
@@ -9,6 +9,7 @@ interface RankScannerInput {
   signal: SignalResult;
   locale?: AppLocale;
   now?: Date;
+  horizon?: TradingHorizon;
 }
 
 export function rankScannerResult({
@@ -17,7 +18,8 @@ export function rankScannerResult({
   candles,
   signal,
   locale = "ko",
-  now = new Date()
+  now = new Date(),
+  horizon = signal.horizon
 }: RankScannerInput): ScannerResult {
   const latest = candles.at(-1);
   const price = latest?.close ?? 0;
@@ -87,6 +89,7 @@ export function rankScannerResult({
   return {
     symbol: symbol.toUpperCase(),
     timeframe,
+    horizon,
     price,
     bias: signal.bias,
     confidence: signal.confidence,
