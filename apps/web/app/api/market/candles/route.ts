@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { analyzeSignal, createMarketDataProvider, isRealtimeTimeframe, isTimeframe, type AppLocale } from "@trading-helper/core";
+import {
+  analyzeSignal,
+  analyzeSwingSignal,
+  createMarketDataProvider,
+  isRealtimeTimeframe,
+  isTimeframe,
+  type AppLocale,
+  type TradingHorizon
+} from "@trading-helper/core";
 
 const provider = createMarketDataProvider();
 
@@ -8,6 +16,7 @@ export async function GET(request: Request) {
   const symbol = searchParams.get("symbol") ?? "AAPL";
   const timeframe = searchParams.get("timeframe");
   const locale = toLocale(searchParams.get("locale"));
+  const horizon = toHorizon(searchParams.get("horizon"));
 
   if (!isTimeframe(timeframe)) {
     return NextResponse.json({ error: "Unsupported timeframe." }, { status: 400 });
@@ -19,17 +28,19 @@ export async function GET(request: Request) {
 
   try {
     const candles = await provider.getCandles(symbol, timeframe);
-    const signal = analyzeSignal({
+    const signalInput = {
       symbol,
       timeframe,
       candles,
       source: provider.source,
       locale
-    });
+    };
+    const signal = horizon === "swing" ? analyzeSwingSignal(signalInput) : analyzeSignal({ ...signalInput, horizon });
 
     return NextResponse.json({
       symbol: symbol.toUpperCase(),
       timeframe,
+      horizon,
       candles,
       signal,
       source: provider.source
@@ -44,4 +55,8 @@ export async function GET(request: Request) {
 
 function toLocale(value: string | null): AppLocale {
   return value === "en" ? "en" : "ko";
+}
+
+function toHorizon(value: string | null): TradingHorizon {
+  return value === "swing" ? "swing" : "scalp";
 }

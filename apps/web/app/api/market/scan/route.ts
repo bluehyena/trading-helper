@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import {
   analyzeSignal,
+  analyzeSwingSignal,
   createMarketDataProvider,
   isRealtimeTimeframe,
   isTimeframe,
   rankScannerResult,
   type AppLocale,
-  type Timeframe
+  type Timeframe,
+  type TradingHorizon
 } from "@trading-helper/core";
 
 export const runtime = "nodejs";
@@ -15,6 +17,7 @@ interface ScanRequestBody {
   symbols?: string[];
   timeframe?: string;
   locale?: AppLocale;
+  horizon?: TradingHorizon;
 }
 
 const provider = createMarketDataProvider();
@@ -27,6 +30,10 @@ export async function POST(request: Request) {
   const requestedTimeframe = body.timeframe ?? null;
   const timeframe: Timeframe = isTimeframe(requestedTimeframe) && !isRealtimeTimeframe(requestedTimeframe) ? requestedTimeframe : "5m";
   const locale: AppLocale = body.locale === "en" ? "en" : "ko";
+  const horizon: TradingHorizon = body.horizon === "swing" ? "swing" : "scalp";
+  const scanTimeframe: Timeframe = horizon === "swing" && (timeframe === "5m" || timeframe === "1m" || timeframe === "15m" || timeframe === "30m" || timeframe === "1h")
+    ? "1d"
+    : timeframe;
 
   if (symbols.length === 0) {
     return NextResponse.json({ results: [] });
@@ -38,16 +45,17 @@ export async function POST(request: Request) {
     const batchResults = await Promise.all(
       batch.map(async (symbol) => {
         try {
-          const candles = await provider.getCandles(symbol, timeframe);
-          const signal = analyzeSignal({
+          const candles = await provider.getCandles(symbol, scanTimeframe);
+          const input = {
             symbol,
-            timeframe,
+            timeframe: scanTimeframe,
             candles,
             locale,
             source: provider.source
-          });
+          };
+          const signal = horizon === "swing" ? analyzeSwingSignal(input) : analyzeSignal({ ...input, horizon });
 
-          return rankScannerResult({ symbol, timeframe, candles, signal, locale });
+          return rankScannerResult({ symbol, timeframe: scanTimeframe, candles, signal, locale, horizon });
         } catch (error) {
           return {
             symbol,
@@ -62,6 +70,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     results: results.sort((left, right) => ("score" in right ? right.score : -999) - ("score" in left ? left.score : -999)),
     source: provider.source,
+    horizon,
     maxSymbols: MAX_SYMBOLS
   });
 }
