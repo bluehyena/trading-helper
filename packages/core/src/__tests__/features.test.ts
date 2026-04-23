@@ -1,16 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeSignal,
+  analyzeSwingSignal,
+  buildMarketMoodSnapshot,
   calculateSpread,
+  calculateTradeReturn,
   detectChartPatterns,
   detectCandlestickPatterns,
   estimateTradeDirection,
   isTimeframe,
   isRealtimeTimeframe,
   parsePolygonEvents,
+  parseFinraShortInterestCsv,
+  parseFinraShortSaleVolumeCsv,
+  parseSecFailsToDeliverText,
   parseYahooSearchResponse,
+  normalizeUserState,
   rankScannerResult,
   RealtimeCandleAggregator,
+  sma,
   timeframeConfig,
   toHeikinAshi,
   type Candle,
@@ -144,6 +152,95 @@ describe("extended market features", () => {
     expect(result.symbol).toBe("AAPL");
     expect(result.score).toBeGreaterThan(0);
     expect(result.keyReason.length).toBeGreaterThan(0);
+  });
+
+  it("calculates SMA and swing signals", () => {
+    expect(sma([1, 2, 3, 4], 3)).toEqual([null, null, 2, 3]);
+
+    const bullish = analyzeSwingSignal({
+      symbol: "MSFT",
+      timeframe: "1d",
+      candles: makeCandles(240),
+      source: "fixture",
+      now: new Date(Date.now())
+    });
+    const bearish = analyzeSwingSignal({
+      symbol: "MSFT",
+      timeframe: "1d",
+      candles: makeCandles(240).map((candle, index) => ({
+        ...candle,
+        close: 140 - index * 0.12,
+        open: 140 - index * 0.12 + 0.05,
+        high: 140 - index * 0.12 + 0.5,
+        low: 140 - index * 0.12 - 0.5
+      })),
+      source: "fixture",
+      now: new Date(Date.now())
+    });
+
+    expect(bullish.horizon).toBe("swing");
+    expect(bullish.bias).toBe("LONG");
+    expect(bearish.bias).toBe("SHORT");
+  });
+
+  it("parses short-flow public data fixtures", () => {
+    const shortInterest = parseFinraShortInterestCsv(
+      "Symbol,Settlement Date,Current Short Interest,Average Daily Share Volume,Days To Cover\nAAPL,2026-04-15,1000000,250000,4"
+    );
+    const shortVolume = parseFinraShortSaleVolumeCsv(
+      "Date|Symbol|ShortVolume|ShortExemptVolume|TotalVolume\n20260422|AAPL|550000|1000|1000000"
+    );
+    const ftd = parseSecFailsToDeliverText(
+      "SETTLEMENT DATE|CUSIP|SYMBOL|QUANTITY (FAILS)|DESCRIPTION|PRICE\n20260415|037833100|AAPL|1200|APPLE INC|201.5"
+    );
+
+    expect(shortInterest[0].daysToCover).toBe(4);
+    expect(shortVolume[0].shortVolumeRatio).toBeCloseTo(0.55);
+    expect(ftd[0].quantity).toBe(1200);
+  });
+
+  it("builds market mood and trade return calculations", () => {
+    const mood = buildMarketMoodSnapshot({
+      vixQuote: {
+        symbol: "^VIX",
+        price: 14,
+        change: 0,
+        changePercent: 0,
+        source: "fixture",
+        timestamp: new Date().toISOString()
+      },
+      spyCandles: makeCandles(60),
+      qqqCandles: makeCandles(60),
+      putCallRatio: 0.7
+    });
+    const returns = calculateTradeReturn({
+      principal: 10_000,
+      feePercent: 0.05,
+      taxPercent: 10,
+      entryPrice: 100,
+      takeProfitPrice: 110,
+      stopLossPrice: 95,
+      direction: "long"
+    });
+
+    expect(mood.score).toBeGreaterThan(50);
+    expect(returns.takeProfit.net).toBeGreaterThan(0);
+    expect(returns.stopLoss.net).toBeLessThan(0);
+  });
+
+  it("normalizes user state without allowing secret-like fields", () => {
+    const state = normalizeUserState({
+      locale: "en",
+      favorites: ["aapl", "AAPL", "MSFT"],
+      lastSymbol: "msft",
+      timeframe: "1d",
+      horizon: "swing",
+      OPENAI_API_KEY: "secret"
+    });
+
+    expect(state.locale).toBe("en");
+    expect(state.favorites).toEqual(["AAPL", "MSFT"]);
+    expect(JSON.stringify(state)).not.toContain("secret");
   });
 });
 

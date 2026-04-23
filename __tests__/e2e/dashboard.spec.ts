@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test("loads the dashboard, renders signal, and streams AI explanation", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
+  let savedState = makeStateFixture();
+  await page.route("**/api/state", async (route) => {
+    if (route.request().method() === "PUT") {
+      savedState = { ...savedState, ...(route.request().postDataJSON() as Record<string, unknown>) };
+    }
+    await route.fulfill({ json: savedState });
+  });
   await page.route("**/api/market/search**", async (route) => {
     const url = new URL(route.request().url());
     const query = url.searchParams.get("q")?.toUpperCase() ?? "";
@@ -32,6 +39,12 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
         source: "fixture"
       }
     });
+  });
+  await page.route("**/api/market/short-flow**", async (route) => {
+    await route.fulfill({ json: makeShortFlowFixture() });
+  });
+  await page.route("**/api/market/mood", async (route) => {
+    await route.fulfill({ json: makeMoodFixture() });
   });
   await page.route("**/api/market/candles**", async (route) => {
     await route.fulfill({ json: makeCandlePayload() });
@@ -92,6 +105,25 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
       body: "롱 근거 테스트 응답입니다. 주문 실행은 하지 않습니다."
     });
   });
+  await page.route("**/api/ai/actions/preview", async (route) => {
+    await route.fulfill({ json: { proposals: [] } });
+  });
+  await page.route("**/api/agent/scan", async (route) => {
+    await route.fulfill({
+      json: {
+        horizon: "scalp",
+        candidates: [],
+        proposedFavorites: [],
+        mood: makeMoodFixture(),
+        report: {
+          title: "에이전트 스캔 리포트",
+          summary: "사용 가능한 셋업 후보가 없습니다.",
+          warnings: [],
+          generatedAt: new Date().toISOString()
+        }
+      }
+    });
+  });
 
   await page.goto("/");
 
@@ -114,6 +146,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.locator(".watch-panel")).toBeInViewport();
   await expect(page.locator(".chart-panel")).toBeInViewport();
   await expect(page.locator(".side-stack")).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "공매도/숏 체크" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "공포/탐욕 프록시" })).toBeVisible();
+  await page.getByRole("button", { name: /AI/ }).click();
   await expect(page.locator(".ai-panel")).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   await page.locator(".chart").hover({ position: { x: 420, y: 180 } });
@@ -148,14 +183,16 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
   await expect(page.getByRole("heading", { name: "Double Bottom" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "FINRA Daily Short Sale Volume" })).toBeVisible();
   await page.getByRole("link", { name: "Dashboard" }).click();
+  await page.getByRole("button", { name: /AI/ }).click();
 
-  await page.getByPlaceholder("Ask about the current setup").fill("Why long?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".chat-form input").fill("Why long?");
+  await page.locator(".chat-form button").click();
   await expect(page.getByText("롱 근거 테스트 응답입니다")).toBeVisible();
 
   await page.getByRole("button", { name: "MSFT" }).click();
   await page.getByRole("button", { name: "1h" }).click();
   await expect(page.getByRole("heading", { name: "MSFT" })).toBeVisible();
+  await page.waitForTimeout(450);
   await page.reload();
   await expect(page.getByRole("heading", { name: "MSFT" })).toBeVisible();
   await expect(page.getByRole("button", { name: "1h" })).toHaveClass(/active/);
@@ -163,6 +200,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
 
 test("renders mocked realtime seconds candles and time and sales", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
+  await page.route("**/api/state", async (route) => {
+    await route.fulfill({ json: makeStateFixture("QQQ") });
+  });
   await page.route("**/api/market/search**", async (route) => {
     await route.fulfill({
       json: [{ symbol: "QQQ", shortName: "Invesco QQQ Trust", exchange: "Nasdaq", quoteType: "ETF" }]
@@ -195,6 +235,12 @@ test("renders mocked realtime seconds candles and time and sales", async ({ page
         source: "fixture"
       }
     });
+  });
+  await page.route("**/api/market/short-flow**", async (route) => {
+    await route.fulfill({ json: makeShortFlowFixture("QQQ") });
+  });
+  await page.route("**/api/market/mood", async (route) => {
+    await route.fulfill({ json: makeMoodFixture() });
   });
   await page.route("**/api/market/candles**", async (route) => {
     await route.fulfill({ json: makeCandlePayload("QQQ") });
@@ -241,11 +287,13 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
   return {
     symbol,
     timeframe,
+    horizon: "scalp",
     candles,
     source: "fixture",
     signal: {
       symbol,
       timeframe,
+      horizon: "scalp",
       bias: "LONG",
       confidence: 68,
       entryZone: { low: 201.2, high: 202.4 },
@@ -282,6 +330,10 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
         ema21: 199,
         ema50: 196,
         ema200: null,
+        sma9: 200.8,
+        sma21: 199.2,
+        sma50: 196.4,
+        sma200: null,
         rsi14: 58,
         macd: 1,
         macdSignal: 0.7,
@@ -325,4 +377,84 @@ function makeRealtimeStream() {
 
 function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+function makeStateFixture(symbol = "AAPL") {
+  return {
+    locale: "ko",
+    favorites: ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", "SPY", "QQQ", "VOO"],
+    lastSymbol: symbol,
+    timeframe: "5m",
+    horizon: "scalp",
+    chart: {
+      candleStyle: "regular",
+      showOverlays: true,
+      movingAverageKind: "ema",
+      movingAveragePeriods: {
+        9: true,
+        21: true,
+        50: false,
+        200: false
+      },
+      vwap: true,
+      bollinger: false
+    },
+    calculator: {
+      principal: 10000,
+      feePercent: 0.05,
+      taxPercent: 0,
+      entryPrice: 100,
+      takeProfitPrice: 105,
+      stopLossPrice: 97,
+      direction: "long"
+    },
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function makeShortFlowFixture(symbol = "AAPL") {
+  return {
+    symbol,
+    shortInterest: {
+      symbol,
+      settlementDate: "2026-04-15",
+      shortInterest: 1000000,
+      averageDailyVolume: 250000,
+      daysToCover: 4,
+      source: "fixture"
+    },
+    shortSaleVolume: {
+      symbol,
+      date: "2026-04-22",
+      shortVolume: 550000,
+      totalVolume: 1000000,
+      shortExemptVolume: 1000,
+      shortVolumeRatio: 0.55,
+      source: "fixture"
+    },
+    failsToDeliver: {
+      symbol,
+      settlementDate: "2026-04-15",
+      quantity: 1200,
+      price: 201.5,
+      source: "fixture"
+    },
+    warnings: ["Short-related public data is delayed and must not be treated as real-time order flow."],
+    dataTimestamp: new Date().toISOString(),
+    source: "fixture"
+  };
+}
+
+function makeMoodFixture() {
+  return {
+    score: 66,
+    label: { ko: "탐욕", en: "Greed" },
+    vix: 16,
+    putCallRatio: 0.8,
+    spyTrend: "LONG",
+    qqqTrend: "LONG",
+    warnings: ["This is a Fear/Greed-style proxy, not the CNN Fear & Greed Index."],
+    dataTimestamp: new Date().toISOString(),
+    source: "fixture"
+  };
 }

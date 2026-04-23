@@ -1,7 +1,7 @@
 "use client";
 
 import type { AiProviderName, AiProviderStatus, ChatMessage, MarketContext } from "@trading-helper/ai";
-import type { AppLocale } from "@trading-helper/core";
+import type { AiActionProposal, AppLocale, TradingHorizon } from "@trading-helper/core";
 import { Bot, Send, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { UiMessages } from "../messages";
@@ -10,14 +10,17 @@ interface AiChatProps {
   locale: AppLocale;
   labels: UiMessages["ai"];
   marketContext: MarketContext | null;
+  horizon: TradingHorizon;
+  onApplyAction: (proposal: AiActionProposal) => void;
 }
 
-export function AiChat({ locale, labels, marketContext }: AiChatProps) {
+export function AiChat({ locale, labels, marketContext, horizon, onApplyAction }: AiChatProps) {
   const [status, setStatus] = useState<AiProviderStatus>({ openai: false, gemini: false, local: true });
   const [provider, setProvider] = useState<AiProviderName>("local");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [proposals, setProposals] = useState<AiActionProposal[]>([]);
 
   useEffect(() => {
     fetch("/api/ai/status")
@@ -85,6 +88,14 @@ export function AiChat({ locale, labels, marketContext }: AiChatProps) {
         assistantText += decoder.decode(value, { stream: true });
         setMessages([...nextMessages, { role: "assistant", content: assistantText }]);
       }
+
+      const previewResponse = await fetch("/api/ai/actions/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed, horizon })
+      });
+      const preview = (await previewResponse.json()) as { proposals?: AiActionProposal[] };
+      setProposals(preview.proposals ?? []);
     } catch {
       setMessages([
         ...nextMessages,
@@ -137,6 +148,25 @@ export function AiChat({ locale, labels, marketContext }: AiChatProps) {
           </div>
         ))}
       </div>
+      {proposals.length > 0 && (
+        <div className="ai-actions">
+          <p>{locale === "en" ? "Approve dashboard action" : "대시보드 변경 승인"}</p>
+          {proposals.map((proposal) => (
+            <div key={proposal.id}>
+              <span>{proposal.label[locale]}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onApplyAction(proposal);
+                  setProposals((current) => current.filter((item) => item.id !== proposal.id));
+                }}
+              >
+                {locale === "en" ? "Apply" : "승인"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <form
         className="chat-form"
         onSubmit={(event) => {

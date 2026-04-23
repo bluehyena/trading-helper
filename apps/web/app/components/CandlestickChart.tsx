@@ -3,10 +3,13 @@
 import {
   bollingerBands,
   ema,
+  sma,
   toHeikinAshi,
   type AppLocale,
   type Candle,
   type CandleStyle,
+  type MovingAverageKind,
+  type MovingAveragePeriod,
   type SignalResult,
   vwap
 } from "@trading-helper/core";
@@ -16,7 +19,8 @@ import { formatCurrency } from "../lib/format";
 import type { UiMessages } from "../messages";
 
 export interface IndicatorToggles {
-  ema: boolean;
+  movingAverageKind: MovingAverageKind;
+  movingAveragePeriods: Record<MovingAveragePeriod, boolean>;
   vwap: boolean;
   bollinger: boolean;
 }
@@ -69,16 +73,19 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
   const regularVisible = candles.slice(start, end);
   const visible = displayCandles.slice(start, end);
   const closeValues = regularVisible.map((candle) => candle.close);
-  const ema9 = ema(closeValues, 9);
-  const ema21 = ema(closeValues, 21);
+  const movingAverages = ([9, 21, 50, 200] as const)
+    .map((period) => ({
+      period,
+      values: toggles.movingAverageKind === "ema" ? ema(closeValues, period) : sma(closeValues, period)
+    }))
+    .filter((series) => toggles.movingAveragePeriods[series.period]);
   const vwapValues = vwap(regularVisible);
   const bands = bollingerBands(closeValues);
   const overlayPrices = showOverlays && signal ? overlayPriceValues(signal) : [];
   const allPrices = visible.flatMap((candle, index) => [
     candle.high,
     candle.low,
-    toggles.ema ? ema9[index] : null,
-    toggles.ema ? ema21[index] : null,
+    ...movingAverages.map((series) => series.values[index]),
     toggles.vwap ? vwapValues[index] : null,
     toggles.bollinger ? bands[index]?.upper : null,
     toggles.bollinger ? bands[index]?.lower : null
@@ -213,12 +220,9 @@ export function CandlestickChart({ candles, candleStyle, locale, labels, signal,
             <path d={linePath(bands.map((band) => band.lower), xFor, yFor)} className="line band-line" />
           </>
         )}
-        {toggles.ema && (
-          <>
-            <path d={linePath(ema9, xFor, yFor)} className="line ema-fast" />
-            <path d={linePath(ema21, xFor, yFor)} className="line ema-slow" />
-          </>
-        )}
+        {movingAverages.map((series) => (
+          <path key={series.period} d={linePath(series.values, xFor, yFor)} className={`line ma-line ma-${series.period}`} />
+        ))}
         {toggles.vwap && <path d={linePath(vwapValues, xFor, yFor)} className="line vwap-line" />}
         {showOverlays && signal && <TradeOverlays locale={locale} signal={signal} visible={visible} xFor={xFor} yFor={yFor} />}
         {visible.map((candle, index) => {

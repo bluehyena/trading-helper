@@ -1,5 +1,5 @@
 import { clamp, indicatorSnapshot, round } from "../indicators";
-import type { AppLocale, Candle, IndicatorSnapshot, SignalBias, SignalResult, Timeframe } from "../types";
+import type { AppLocale, Candle, IndicatorSnapshot, SignalBias, SignalResult, Timeframe, TradingHorizon } from "../types";
 import { detectChartPatterns } from "./chart-patterns";
 import { detectCandlestickPatterns } from "./patterns";
 import { isDataStale, minutesSinceLatestCandle } from "./staleness";
@@ -11,6 +11,7 @@ interface AnalyzeSignalInput {
   source: string;
   locale?: AppLocale;
   now?: Date;
+  horizon?: TradingHorizon;
 }
 
 const signalCopy = {
@@ -70,7 +71,8 @@ export function analyzeSignal({
   candles,
   source,
   locale = "ko",
-  now = new Date()
+  now = new Date(),
+  horizon = "scalp"
 }: AnalyzeSignalInput): SignalResult {
   const copy = signalCopy[locale];
   const indicators = indicatorSnapshot(candles);
@@ -85,6 +87,7 @@ export function analyzeSignal({
     return {
       symbol,
       timeframe,
+      horizon,
       bias: "NEUTRAL",
       confidence: 0,
       entryZone: null,
@@ -223,6 +226,7 @@ export function analyzeSignal({
   return {
     symbol: symbol.toUpperCase(),
     timeframe,
+    horizon,
     bias,
     confidence,
     entryZone: tradePlan.entryZone,

@@ -6,6 +6,7 @@ playwright-report/
 test-results/
 .turbo/
 .logs/
+.trading-helper/
 .env
 .env.*
 !.env.example

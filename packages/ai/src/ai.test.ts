@@ -39,6 +39,7 @@ function makeRequest(content: string): AiChatRequest {
       signal: {
         symbol: "AAPL",
         timeframe: "5m",
+        horizon: "scalp",
         bias: "LONG",
         confidence: 64,
         entryZone: { low: 199, high: 201 },
@@ -57,6 +58,10 @@ function makeRequest(content: string): AiChatRequest {
           ema21: 198,
           ema50: 195,
           ema200: 180,
+          sma9: 199,
+          sma21: 197,
+          sma50: 194,
+          sma200: 179,
           rsi14: 58,
           macd: 1,
           macdSignal: 0.8,
