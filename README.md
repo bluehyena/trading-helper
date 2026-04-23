@@ -47,6 +47,11 @@ Trading Helper turns free public market data, technical indicators, long/short/n
 - Local web dashboard for U.S. equities and U.S.-listed ETFs such as `SPY`, `QQQ`, and `VOO`: watchlist, symbol search, candlestick chart, signal card, risk panel, and AI chat.
 - Optional Polygon/Massive BYOK realtime mode for `1s`, `5s`, and `15s` candles, Time & Sales, and Level 1 bid/ask spread.
 - Local favorites with manual scanner ranking for the best long/short setups in your saved symbols.
+- Local JSON state persistence through `.trading-helper/state.json`, so favorites and dashboard preferences survive app restarts without a database.
+- `Scalp` and `Swing` viewpoints: intraday signals for short-term trading and daily/weekly swing context for longer holds.
+- Delayed Short Flow and Market Mood panels for FINRA/SEC short context, VIX/SPY/QQQ mood, and optional Cboe put/call ratio.
+- Toggleable AI panel with approval-based dashboard actions such as adding favorites or running an agent scan.
+- Return calculator for capital, entry, take profit, stop loss, fees, taxes, net P/L, ROI, and break-even price.
 - Scroll-wheel chart zoom, icon zoom controls, and drag panning across recent candles.
 - Daily, weekly, and monthly charts, plus regular and Heikin-Ashi candle display modes.
 - Volume histogram and trade-plan overlays for entry zone, stop loss, and 1R/2R targets.
@@ -55,6 +60,7 @@ Trading Helper turns free public market data, technical indicators, long/short/n
 - Localized price display: English shows USD; Korean converts the displayed U.S. stock price to KRW using the current USD/KRW rate and floors sub-won decimals.
 - Built for analysis support only: no broker connection, no order execution, no guaranteed real-time data.
 - Technical indicators: EMA 9/21/50/200, VWAP, RSI 14, MACD, Bollinger Bands, ATR, relative volume, OBV, and pivot support/resistance.
+- Chart moving averages can be switched between EMA and SMA with 9/21/50/200 period toggles.
 - Signal engine outputs `LONG`, `SHORT`, or `NEUTRAL` with confidence, entry watch zone, invalidation, 1R/2R targets, reasons, warnings, and data timestamp.
 - BYOK AI providers: OpenAI, Gemini, and a local fallback explanation mode.
 
@@ -109,7 +115,13 @@ MARKET_DATA_PROVIDER=yahoo
 ALPHA_VANTAGE_API_KEY=
 REALTIME_DATA_PROVIDER=polygon
 POLYGON_API_KEY=
+FINRA_SHORT_INTEREST_CSV_URL=
+FINRA_SHORT_VOLUME_CSV_URL=
+SEC_FTD_TXT_URL=
+CBOE_PUT_CALL_RATIO_CSV_URL=
 ```
+
+For setup details and current official references, see [API_KEYS.md](./docs/API_KEYS.md). Korean guide: [API_KEYS.ko.md](./docs/API_KEYS.ko.md).
 
 ### Production Run
 
@@ -149,6 +161,15 @@ npm run test:e2e
 
 The default provider is no-key public data for accessible local use. Because free data can be delayed, incomplete, rate-limited, or governed by third-party terms, the UI labels the source and timestamp directly. Second-level candles require a user-supplied `POLYGON_API_KEY`; entitlement and realtime/delayed behavior depend on the user's Polygon/Massive plan. Future provider adapters should preserve source/freshness metadata and never expose API keys to the browser.
 
+| Data / Provider | Default Cost State | Key Required | Notes |
+| --- | --- | --- | --- |
+| Yahoo-style public endpoints | Free/no-key | No | Unofficial, delayed/best-effort, research-use only. |
+| FINRA/SEC/Cboe public files | Free/no-key | No | Delayed context; optional file URLs enable parsed values. |
+| Alpha Vantage | Free key available | Optional | Free limits apply; premium may be required for some endpoints. |
+| Gemini | Free tier for eligible projects | Optional | Model-specific rate limits; paid tier uses Cloud Billing. |
+| OpenAI | Token-billed API | Optional | Not guaranteed free; check current pricing before use. |
+| Polygon/Massive | Plan-dependent | Required for realtime | Seconds candles and tape need `POLYGON_API_KEY`; realtime/delayed access depends on plan. |
+
 ## Star History
 
 If Trading Helper helps your workflow, a star makes the project easier for other traders and builders to discover.
@@ -163,6 +184,7 @@ Project workflow docs:
 
 - [Branching Policy](./docs/BRANCHING.md)
 - [Coding Style](./docs/CODING_STYLE.md)
+- [API Key Guide](./docs/API_KEYS.md)
 
 ## Security
 

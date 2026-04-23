@@ -109,7 +109,13 @@ MARKET_DATA_PROVIDER=yahoo
 ALPHA_VANTAGE_API_KEY=
 REALTIME_DATA_PROVIDER=polygon
 POLYGON_API_KEY=
+FINRA_SHORT_INTEREST_CSV_URL=
+FINRA_SHORT_VOLUME_CSV_URL=
+SEC_FTD_TXT_URL=
+CBOE_PUT_CALL_RATIO_CSV_URL=
 ```
+
+API 키와 무료/유료 데이터 차이는 [API_KEYS.ko.md](./docs/API_KEYS.ko.md)를 참고하세요. 영어 문서: [API_KEYS.md](./docs/API_KEYS.md).
 
 ### 프로덕션 실행
 
@@ -152,6 +158,17 @@ npm run test:e2e
 ## 스타 히스토리
 
 Trading Helper가 유용하다면 star를 눌러 주세요. 다른 트레이더와 개발자가 프로젝트를 발견하는 데 큰 도움이 됩니다.
+
+### 데이터 비용/키 요약
+
+| 데이터 / 제공자 | 기본 비용 상태 | 키 필요 | 참고 |
+| --- | --- | --- | --- |
+| Yahoo 스타일 공개 엔드포인트 | 무료/키 없음 | 없음 | 비공식, 지연/최선형, 리서치용 |
+| FINRA/SEC/Cboe 공개 파일 | 무료/키 없음 | 없음 | 지연 참고 자료, 파일 URL 설정 시 파싱값 표시 |
+| Alpha Vantage | 무료 키 가능 | 선택 | 무료 제한과 premium 전용 기능 있음 |
+| Gemini | 조건부 무료 tier | 선택 | 모델별 rate limit, paid tier는 Cloud Billing |
+| OpenAI | 토큰 과금형 API | 선택 | 무료 보장 아님, 최신 가격 확인 필요 |
+| Polygon/Massive | 플랜 의존 | 실시간 기능에 필요 | 초봉/체결창은 `POLYGON_API_KEY` 필요 |
 
 [![Star History Chart](https://api.star-history.com/svg?repos=bluehyena/trading-helper&type=Date)](https://star-history.com/#bluehyena/trading-helper&Date)
 

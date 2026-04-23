@@ -6,32 +6,47 @@ import {
   isRealtimeTimeframe,
   realtimeRollingLimit,
   upsertRollingCandle,
+  defaultUserState,
+  normalizeUserState,
   type AppLocale,
+  type AgentScanResult,
+  type AiActionProposal,
   type Candle,
   type CandleStyle,
+  type CalculatorDefaults,
+  type ChartPreferences,
+  type MarketMoodSnapshot,
   type Quote,
   type RealtimeQuote,
   type RealtimeTrade,
   type ScannerResult,
   type SignalResult,
   type SymbolSearchResult,
-  type Timeframe
+  type ShortFlowSnapshot,
+  type Timeframe,
+  type TradingHorizon,
+  type UserState
 } from "@trading-helper/core";
-import { AlertCircle, BookOpen, RefreshCcw, Search, Star } from "lucide-react";
+import { AlertCircle, Bot, BookOpen, Calculator, RefreshCcw, Search, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatKrw, formatNumber, formatPercent } from "../lib/format";
 import { messages } from "../messages";
 import { AiChat } from "./AiChat";
+import { AgentReportPanel } from "./AgentReportPanel";
 import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
 import { FlowPanel } from "./FlowPanel";
+import { MarketMoodPanel } from "./MarketMoodPanel";
+import { ProfitCalculator } from "./ProfitCalculator";
 import { RiskPanel } from "./RiskPanel";
 import { SignalCard } from "./SignalCard";
+import { ShortFlowPanel } from "./ShortFlowPanel";
 import { TimeSalesPanel } from "./TimeSalesPanel";
 
 interface CandlePayload {
   symbol: string;
   timeframe: Timeframe;
+  horizon?: TradingHorizon;
   candles: Candle[];
   signal: SignalResult;
   source: string;
@@ -58,15 +73,20 @@ const timeframes: Timeframe[] = ["1s", "5s", "15s", "1m", "5m", "15m", "30m", "1
 const favoritesKey = "trading-helper-favorites";
 const lastSymbolKey = "trading-helper-last-symbol";
 const lastTimeframeKey = "trading-helper-last-timeframe";
+const lastHorizonKey = "trading-helper-last-horizon";
 
 export function Dashboard() {
   const [locale, setLocale] = useState<AppLocale>("ko");
   const [symbol, setSymbol] = useState("AAPL");
   const [query, setQuery] = useState("AAPL");
   const [timeframe, setTimeframe] = useState<Timeframe>("5m");
+  const [horizon, setHorizon] = useState<TradingHorizon>("scalp");
   const [payload, setPayload] = useState<CandlePayload | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [fxRate, setFxRate] = useState<FxRate | null>(null);
+  const [shortFlow, setShortFlow] = useState<ShortFlowSnapshot | null>(null);
+  const [marketMood, setMarketMood] = useState<MarketMoodSnapshot | null>(null);
+  const [agentResult, setAgentResult] = useState<AgentScanResult | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus | null>(null);
   const [realtimeSource, setRealtimeSource] = useState<string | null>(null);
   const [realtimeQuote, setRealtimeQuote] = useState<RealtimeQuote | null>(null);
@@ -77,13 +97,23 @@ export function Dashboard() {
   const [favorites, setFavorites] = useState<string[]>(defaultFavorites);
   const [scanRows, setScanRows] = useState<ScanRow[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [isAgentScanning, setIsAgentScanning] = useState(false);
   const [candleStyle, setCandleStyle] = useState<CandleStyle>("regular");
   const [showOverlays, setShowOverlays] = useState(true);
   const [toggles, setToggles] = useState<IndicatorToggles>({
-    ema: true,
+    movingAverageKind: "ema",
+    movingAveragePeriods: {
+      9: true,
+      21: true,
+      50: false,
+      200: false
+    },
     vwap: true,
     bollinger: false
   });
+  const [calculatorDefaults, setCalculatorDefaults] = useState<CalculatorDefaults>(defaultUserState.calculator);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isAiOpen, setIsAiOpen] = useState(false);
   const [hasRestoredSession, setHasRestoredSession] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,28 +121,44 @@ export function Dashboard() {
   const isRealtime = isRealtimeTimeframe(timeframe);
   const realtimeStatusKind = realtimeStatus ? (realtimeStatus.configured ? "ready" : "missing") : "checking";
 
+  function applyUserState(state: UserState) {
+    setLocale(state.locale);
+    setFavorites(mergeFavorites(state.favorites, defaultEtfFavorites));
+    setSymbol(state.lastSymbol);
+    setQuery(state.lastSymbol);
+    setTimeframe(state.timeframe);
+    setHorizon(state.horizon);
+    setCandleStyle(state.chart.candleStyle);
+    setShowOverlays(state.chart.showOverlays);
+    setToggles({
+      movingAverageKind: state.chart.movingAverageKind,
+      movingAveragePeriods: state.chart.movingAveragePeriods,
+      vwap: state.chart.vwap,
+      bollinger: state.chart.bollinger
+    });
+    setCalculatorDefaults(state.calculator);
+  }
+
   useEffect(() => {
     const savedLocale = window.localStorage.getItem("trading-helper-locale");
     const savedFavorites = readFavorites();
     const savedSymbol = normalizeStoredSymbol(window.localStorage.getItem(lastSymbolKey));
     const savedTimeframe = window.localStorage.getItem(lastTimeframeKey);
+    const savedHorizon = window.localStorage.getItem(lastHorizonKey);
+    const fallbackState = normalizeUserState({
+      ...defaultUserState,
+      locale: savedLocale === "ko" || savedLocale === "en" ? savedLocale : defaultUserState.locale,
+      favorites: savedFavorites.length > 0 ? savedFavorites : defaultUserState.favorites,
+      lastSymbol: savedSymbol ?? defaultUserState.lastSymbol,
+      timeframe: isTimeframe(savedTimeframe) ? savedTimeframe : defaultUserState.timeframe,
+      horizon: savedHorizon === "swing" ? "swing" : defaultUserState.horizon
+    });
 
-    window.setTimeout(() => {
-      if (savedLocale === "ko" || savedLocale === "en") {
-        setLocale(savedLocale);
-      }
-      if (savedFavorites.length > 0) {
-        setFavorites(savedFavorites);
-      }
-      if (savedSymbol) {
-        setSymbol(savedSymbol);
-        setQuery(savedSymbol);
-      }
-      if (isTimeframe(savedTimeframe)) {
-        setTimeframe(savedTimeframe);
-      }
-      setHasRestoredSession(true);
-    }, 0);
+    fetch("/api/state")
+      .then((response) => response.json())
+      .then((state: UserState) => applyUserState(normalizeUserState(state)))
+      .catch(() => applyUserState(fallbackState))
+      .finally(() => setHasRestoredSession(true));
   }, []);
 
   useEffect(() => {
@@ -141,10 +187,38 @@ export function Dashboard() {
       return;
     }
 
+    const state = buildUserState({
+      locale,
+      favorites,
+      lastSymbol: symbol,
+      timeframe,
+      horizon,
+      candleStyle,
+      showOverlays,
+      toggles,
+      calculatorDefaults
+    });
+    const handle = window.setTimeout(() => {
+      void fetch("/api/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state)
+      });
+    }, 350);
+
+    return () => window.clearTimeout(handle);
+  }, [calculatorDefaults, candleStyle, favorites, hasRestoredSession, horizon, locale, showOverlays, symbol, timeframe, toggles]);
+
+  useEffect(() => {
+    if (!hasRestoredSession) {
+      return;
+    }
+
     window.localStorage.setItem(lastSymbolKey, symbol);
     window.localStorage.setItem(lastTimeframeKey, timeframe);
-    void loadMarket(symbol, timeframe, locale);
-  }, [hasRestoredSession, symbol, timeframe, locale]);
+    window.localStorage.setItem(lastHorizonKey, horizon);
+    void loadMarket(symbol, timeframe, locale, horizon);
+  }, [hasRestoredSession, symbol, timeframe, locale, horizon]);
 
   useEffect(() => {
     if (!isRealtime || realtimeStatus?.configured !== false) {
@@ -153,6 +227,14 @@ export function Dashboard() {
 
     window.setTimeout(() => setTimeframe("5m"), 0);
   }, [isRealtime, realtimeStatus?.configured]);
+
+  useEffect(() => {
+    if (horizon !== "swing" || timeframe === "1d" || timeframe === "1w" || timeframe === "1mo") {
+      return;
+    }
+
+    window.setTimeout(() => setTimeframe("1d"), 0);
+  }, [horizon, timeframe]);
 
   useEffect(() => {
     if (!hasRestoredSession || !isRealtimeTimeframe(timeframe)) {
@@ -266,6 +348,7 @@ export function Dashboard() {
 
     return {
       symbol,
+      horizon,
       quote:
         displayPriceUsd !== null && displayPriceTimestamp
           ? {
@@ -277,6 +360,8 @@ export function Dashboard() {
             }
           : undefined,
       signal: payload.signal,
+      shortFlow,
+      marketMood,
       realtime: isRealtime
         ? {
             enabled: true,
@@ -299,49 +384,67 @@ export function Dashboard() {
   }, [
     displayPriceTimestamp,
     displayPriceUsd,
+    horizon,
     isRealtime,
     latestRealtimeTrade,
     locale,
+    marketMood,
     payload,
     quote,
     recentTrades.length,
     realtimeQuote,
     realtimeSource,
     realtimeStatus?.source,
+    shortFlow,
     symbol,
     timeframe
   ]);
 
-  async function loadMarket(nextSymbol: string, nextTimeframe: Timeframe, nextLocale: AppLocale) {
+  async function loadMarket(
+    nextSymbol: string,
+    nextTimeframe: Timeframe,
+    nextLocale: AppLocale,
+    nextHorizon: TradingHorizon
+  ) {
     setIsLoading(true);
     setError(null);
 
     try {
       if (isRealtimeTimeframe(nextTimeframe)) {
-        const [quoteResponse, fxResponse] = await Promise.all([
+        const [quoteResponse, fxResponse, shortFlowResponse, moodResponse] = await Promise.all([
           fetch(`/api/market/quote?symbol=${encodeURIComponent(nextSymbol)}`),
-          fetch("/api/market/fx")
+          fetch("/api/market/fx"),
+          fetch(`/api/market/short-flow?symbol=${encodeURIComponent(nextSymbol)}`),
+          fetch("/api/market/mood")
         ]);
         const quoteJson = (await quoteResponse.json()) as Quote | { error: string };
         const fxJson = (await fxResponse.json()) as FxRate | { error: string };
+        const shortFlowJson = (await shortFlowResponse.json()) as ShortFlowSnapshot | { error: string };
+        const moodJson = (await moodResponse.json()) as MarketMoodSnapshot | { error: string };
 
         setPayload(null);
         setQuote("error" in quoteJson ? null : quoteJson);
         setFxRate("error" in fxJson ? null : fxJson);
+        setShortFlow("error" in shortFlowJson ? null : shortFlowJson);
+        setMarketMood("error" in moodJson ? null : moodJson);
         return;
       }
 
-      const [candlesResponse, quoteResponse, fxResponse] = await Promise.all([
+      const [candlesResponse, quoteResponse, fxResponse, shortFlowResponse, moodResponse] = await Promise.all([
         fetch(
-          `/api/market/candles?symbol=${encodeURIComponent(nextSymbol)}&timeframe=${nextTimeframe}&locale=${nextLocale}`
+          `/api/market/candles?symbol=${encodeURIComponent(nextSymbol)}&timeframe=${nextTimeframe}&locale=${nextLocale}&horizon=${nextHorizon}`
         ),
         fetch(`/api/market/quote?symbol=${encodeURIComponent(nextSymbol)}`),
-        fetch("/api/market/fx")
+        fetch("/api/market/fx"),
+        fetch(`/api/market/short-flow?symbol=${encodeURIComponent(nextSymbol)}`),
+        fetch("/api/market/mood")
       ]);
 
       const candlesJson = (await candlesResponse.json()) as CandlePayload | { error: string };
       const quoteJson = (await quoteResponse.json()) as Quote | { error: string };
       const fxJson = (await fxResponse.json()) as FxRate | { error: string };
+      const shortFlowJson = (await shortFlowResponse.json()) as ShortFlowSnapshot | { error: string };
+      const moodJson = (await moodResponse.json()) as MarketMoodSnapshot | { error: string };
 
       if (!candlesResponse.ok || "error" in candlesJson) {
         throw new Error("error" in candlesJson ? candlesJson.error : messages[nextLocale].errors.candles);
@@ -350,6 +453,8 @@ export function Dashboard() {
       setPayload(candlesJson);
       setQuote("error" in quoteJson ? null : quoteJson);
       setFxRate("error" in fxJson ? null : fxJson);
+      setShortFlow("error" in shortFlowJson ? null : shortFlowJson);
+      setMarketMood("error" in moodJson ? null : moodJson);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : messages[nextLocale].errors.market);
     } finally {
@@ -365,12 +470,48 @@ export function Dashboard() {
       const response = await fetch("/api/market/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols: favorites, timeframe: isRealtimeTimeframe(timeframe) ? "5m" : timeframe, locale })
+        body: JSON.stringify({ symbols: favorites, timeframe: isRealtimeTimeframe(timeframe) ? "5m" : timeframe, locale, horizon })
       });
       const json = (await response.json()) as { results?: ScanRow[] };
       setScanRows(json.results ?? []);
     } finally {
       setIsScanning(false);
+    }
+  }
+
+  async function runAgentScan() {
+    setIsAgentScanning(true);
+    try {
+      const response = await fetch("/api/agent/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ horizon, locale })
+      });
+      const json = (await response.json()) as AgentScanResult;
+      setAgentResult(json);
+      setScanRows(json.candidates);
+    } finally {
+      setIsAgentScanning(false);
+    }
+  }
+
+  function addFavorites(nextSymbols: string[]) {
+    setFavorites((current) => mergeFavorites(current, nextSymbols));
+  }
+
+  function applyAiAction(proposal: AiActionProposal) {
+    if (proposal.type === "add_favorite") {
+      addFavorites([proposal.symbol]);
+    } else if (proposal.type === "remove_favorite") {
+      setFavorites((current) => current.filter((favorite) => favorite !== proposal.symbol));
+    } else if (proposal.type === "set_symbol") {
+      chooseSymbol(proposal.symbol);
+    } else if (proposal.type === "set_timeframe") {
+      setTimeframe(proposal.timeframe);
+    } else if (proposal.type === "set_horizon") {
+      setHorizon(proposal.horizon);
+    } else if (proposal.type === "run_agent_scan") {
+      void runAgentScan();
     }
   }
 
@@ -408,7 +549,7 @@ export function Dashboard() {
     if (isRealtimeTimeframe(timeframe)) {
       setRealtimeNonce((current) => current + 1);
     }
-    void loadMarket(symbol, timeframe, locale);
+    void loadMarket(symbol, timeframe, locale, horizon);
   }
 
   return (
@@ -419,6 +560,18 @@ export function Dashboard() {
           <h1>{t.appName}</h1>
         </div>
         <div className="top-actions">
+          <div className="horizon-switch" aria-label={locale === "en" ? "Trading horizon" : "매매 관점"}>
+            {(["scalp", "swing"] as TradingHorizon[]).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={horizon === item ? "active" : ""}
+                onClick={() => setHorizon(item)}
+              >
+                {item === "scalp" ? "Scalp" : "Swing"}
+              </button>
+            ))}
+          </div>
           <Link className="learn-link" href="/learn">
             <BookOpen size={17} aria-hidden />
             {t.nav.learn}
@@ -443,7 +596,7 @@ export function Dashboard() {
         <span>{t.disclaimer}</span>
       </section>
 
-      <section className="dashboard-grid">
+      <section className={isAiOpen ? "dashboard-grid ai-open" : "dashboard-grid ai-closed"}>
         <aside className="watch-panel">
           <form
             className="search-box"
@@ -492,9 +645,14 @@ export function Dashboard() {
               <p className="eyebrow">Scanner</p>
               <h2>{t.scanner.title}</h2>
             </div>
-            <button className="small-action" type="button" onClick={scanFavorites} disabled={isScanning || favorites.length === 0}>
-              {isScanning ? t.scanner.scanning : t.scanner.scan}
-            </button>
+            <div className="panel-actions">
+              <button className="small-action" type="button" onClick={scanFavorites} disabled={isScanning || favorites.length === 0}>
+                {isScanning ? t.scanner.scanning : t.scanner.scan}
+              </button>
+              <button className="small-action" type="button" onClick={runAgentScan} disabled={isAgentScanning}>
+                {isAgentScanning ? (locale === "en" ? "Agent..." : "에이전트...") : "Agent"}
+              </button>
+            </div>
           </div>
           <div className="watchlist">
             {favorites.map((item) => (
@@ -583,14 +741,15 @@ export function Dashboard() {
           <div className="segmented" aria-label={t.aria.timeframe}>
             {timeframes.map((item) => {
               const needsRealtimeKey = isRealtimeTimeframe(item) && realtimeStatus?.configured === false;
+              const disabledByHorizon = horizon === "swing" && item !== "1d" && item !== "1w" && item !== "1mo";
 
               return (
                 <button
                   key={item}
                   type="button"
                   className={item === timeframe ? "active" : ""}
-                  disabled={needsRealtimeKey}
-                  title={needsRealtimeKey ? t.errors.realtimeKey : undefined}
+                  disabled={needsRealtimeKey || disabledByHorizon}
+                  title={needsRealtimeKey ? t.errors.realtimeKey : disabledByHorizon ? "Swing uses daily/weekly/monthly charts." : undefined}
                   onClick={() => setTimeframe(item)}
                 >
                   {item}
@@ -599,7 +758,30 @@ export function Dashboard() {
             })}
           </div>
           <div className="toggle-row" aria-label={t.aria.indicators}>
-            <Toggle label="EMA" checked={toggles.ema} onChange={() => setToggles({ ...toggles, ema: !toggles.ema })} />
+            <button
+              type="button"
+              className="toggle active"
+              onClick={() => setToggles({ ...toggles, movingAverageKind: toggles.movingAverageKind === "ema" ? "sma" : "ema" })}
+            >
+              <span aria-hidden />
+              {toggles.movingAverageKind.toUpperCase()}
+            </button>
+            {([9, 21, 50, 200] as const).map((period) => (
+              <Toggle
+                key={period}
+                label={`${period}`}
+                checked={toggles.movingAveragePeriods[period]}
+                onChange={() =>
+                  setToggles({
+                    ...toggles,
+                    movingAveragePeriods: {
+                      ...toggles.movingAveragePeriods,
+                      [period]: !toggles.movingAveragePeriods[period]
+                    }
+                  })
+                }
+              />
+            ))}
             <Toggle
               label="VWAP"
               checked={toggles.vwap}
@@ -645,9 +827,31 @@ export function Dashboard() {
           <SignalCard locale={locale} labels={t.signal} signal={payload?.signal ?? null} />
           <RiskPanel labels={t.risk} signal={payload?.signal ?? null} />
           <FlowPanel candles={payload?.candles ?? []} locale={locale} signal={payload?.signal ?? null} />
+          <ShortFlowPanel locale={locale} snapshot={shortFlow} />
+          <MarketMoodPanel locale={locale} mood={marketMood} />
+          <div className="utility-actions">
+            <button className="small-action wide" type="button" onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}>
+              <Calculator size={15} aria-hidden />
+              {locale === "en" ? "Return calculator" : "수익률 계산기"}
+            </button>
+            <button className="small-action wide" type="button" onClick={() => setIsAiOpen(!isAiOpen)}>
+              <Bot size={15} aria-hidden />
+              {isAiOpen ? (locale === "en" ? "Hide AI" : "AI 닫기") : (locale === "en" ? "Open AI" : "AI 열기")}
+            </button>
+          </div>
+          {isCalculatorOpen && <ProfitCalculator locale={locale} value={calculatorDefaults} onChange={setCalculatorDefaults} />}
+          <AgentReportPanel locale={locale} result={agentResult} onAddFavorites={addFavorites} />
         </section>
 
-        <AiChat locale={locale} labels={t.ai} marketContext={marketContext} />
+        {isAiOpen && (
+          <AiChat
+            locale={locale}
+            labels={t.ai}
+            marketContext={marketContext}
+            horizon={horizon}
+            onApplyAction={applyAiAction}
+          />
+        )}
       </section>
     </main>
   );
@@ -662,6 +866,53 @@ function readFavorites(): string[] {
   } catch {
     return [];
   }
+}
+
+function buildUserState({
+  locale,
+  favorites,
+  lastSymbol,
+  timeframe,
+  horizon,
+  candleStyle,
+  showOverlays,
+  toggles,
+  calculatorDefaults
+}: {
+  locale: AppLocale;
+  favorites: string[];
+  lastSymbol: string;
+  timeframe: Timeframe;
+  horizon: TradingHorizon;
+  candleStyle: CandleStyle;
+  showOverlays: boolean;
+  toggles: IndicatorToggles;
+  calculatorDefaults: CalculatorDefaults;
+}): UserState {
+  return normalizeUserState({
+    locale,
+    favorites,
+    lastSymbol,
+    timeframe,
+    horizon,
+    chart: chartPreferencesFromToggles(candleStyle, showOverlays, toggles),
+    calculator: calculatorDefaults
+  });
+}
+
+function chartPreferencesFromToggles(
+  candleStyle: CandleStyle,
+  showOverlays: boolean,
+  toggles: IndicatorToggles
+): ChartPreferences {
+  return {
+    candleStyle,
+    showOverlays,
+    movingAverageKind: toggles.movingAverageKind,
+    movingAveragePeriods: toggles.movingAveragePeriods,
+    vwap: toggles.vwap,
+    bollinger: toggles.bollinger
+  };
 }
 
 function mergeFavorites(primary: string[], additions: string[]): string[] {
