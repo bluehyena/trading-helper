@@ -16,6 +16,28 @@ export type PatternDirection = "BULLISH" | "BEARISH";
 
 export type PatternStrength = "LOW" | "MEDIUM" | "HIGH";
 
+export type OptionContractSide = "CALL" | "PUT";
+
+export type DarkPoolTier = "T1" | "T2" | "OTCE";
+
+export type OptionVolatilityRegime = "LOW" | "MEDIUM" | "HIGH";
+
+export type OptionStrategyId =
+  | "bull_call_spread"
+  | "bear_put_spread"
+  | "bull_put_spread"
+  | "bear_call_spread"
+  | "long_straddle"
+  | "short_straddle"
+  | "long_strangle"
+  | "short_strangle"
+  | "iron_condor"
+  | "butterfly_spread"
+  | "covered_call"
+  | "protective_put";
+
+export type OptionStrategyRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+
 export type ChartPatternId =
   | "head_and_shoulders"
   | "inverse_head_and_shoulders"
@@ -197,6 +219,107 @@ export interface ChartPatternSignal {
   points: ChartPatternPoint[];
 }
 
+export interface OptionFlowContract {
+  contractSymbol: string;
+  side: OptionContractSide;
+  strike: number;
+  expiration: string;
+  lastPrice: number | null;
+  volume: number | null;
+  openInterest: number | null;
+  impliedVolatility: number | null;
+  inTheMoney: boolean;
+  distanceFromSpotPercent: number | null;
+}
+
+export interface OptionStrategyLeg {
+  asset: OptionContractSide | "STOCK";
+  side: "BUY" | "SELL";
+  quantity: number;
+  strike: number | null;
+  expiration: string | null;
+  premium: number | null;
+  note: {
+    ko: string;
+    en: string;
+  };
+}
+
+export interface OptionStrategyRecommendation {
+  id: OptionStrategyId;
+  title: {
+    ko: string;
+    en: string;
+  };
+  summary: {
+    ko: string;
+    en: string;
+  };
+  outlook: SignalBias | "HEDGE";
+  volatilityRegime: OptionVolatilityRegime;
+  riskLevel: OptionStrategyRiskLevel;
+  fitScore: number;
+  maxProfit: number | null;
+  maxProfitSummary: {
+    ko: string;
+    en: string;
+  };
+  maxLoss: number | null;
+  maxLossSummary: {
+    ko: string;
+    en: string;
+  };
+  breakEvenPrices: number[];
+  estimatedBuyingPower: number | null;
+  estimatedBuyingPowerSummary: {
+    ko: string;
+    en: string;
+  };
+  legs: OptionStrategyLeg[];
+  warnings: string[];
+}
+
+export interface OptionSentimentSnapshot {
+  symbol: string;
+  expiration: string | null;
+  underlyingPrice: number | null;
+  callVolume: number | null;
+  putVolume: number | null;
+  callOpenInterest: number | null;
+  putOpenInterest: number | null;
+  putCallVolumeRatio: number | null;
+  putCallOpenInterestRatio: number | null;
+  atmCallImpliedVolatility: number | null;
+  atmPutImpliedVolatility: number | null;
+  impliedVolatilitySkew: number | null;
+  volatilityRegime: OptionVolatilityRegime;
+  bias: SignalBias;
+  confidence: number;
+  reasons: string[];
+  warnings: string[];
+  nearCalls: OptionFlowContract[];
+  nearPuts: OptionFlowContract[];
+  strategyRecommendations: OptionStrategyRecommendation[];
+  topCalls: OptionFlowContract[];
+  topPuts: OptionFlowContract[];
+  dataTimestamp: string;
+  source: string;
+}
+
+export interface DarkPoolSnapshot {
+  symbol: string;
+  weekStartDate: string | null;
+  tier: DarkPoolTier | null;
+  totalWeeklyShares: number | null;
+  totalWeeklyTrades: number | null;
+  lastUpdateDate: string | null;
+  atsToShortVolumeRatio: number | null;
+  atsShareOfShortVolumePercent: number | null;
+  warnings: string[];
+  dataTimestamp: string;
+  source: string;
+}
+
 export interface SignalResult {
   symbol: string;
   timeframe: Timeframe;
@@ -212,6 +335,7 @@ export interface SignalResult {
   indicators: IndicatorSnapshot;
   patterns: PatternSignal[];
   chartPatterns: ChartPatternSignal[];
+  optionsSentiment?: OptionSentimentSnapshot | null;
   dataTimestamp: string;
   source: string;
 }
@@ -278,6 +402,7 @@ export interface ShortFlowSnapshot {
   shortInterest: ShortInterestRecord | null;
   shortSaleVolume: ShortSaleVolumeRecord | null;
   failsToDeliver: FailsToDeliverRecord | null;
+  darkPool: DarkPoolSnapshot | null;
   warnings: string[];
   dataTimestamp: string;
   source: string;

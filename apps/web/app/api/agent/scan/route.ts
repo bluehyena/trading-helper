@@ -13,6 +13,7 @@ import {
   type Timeframe,
   type TradingHorizon
 } from "@trading-helper/core";
+import { fetchOptionSentimentSnapshot } from "@trading-helper/core/server";
 
 export const runtime = "nodejs";
 
@@ -85,11 +86,12 @@ export async function POST(request: Request) {
     const batchRows = await Promise.all(
       batch.map(async (symbol) => {
         try {
-          const [candles, shortFlow] = await Promise.all([
+          const [candles, shortFlow, optionSentiment] = await Promise.all([
             provider.getCandles(symbol, timeframe),
-            fetchShortFlowSnapshot(symbol).catch(() => null)
+            fetchShortFlowSnapshot(symbol).catch(() => null),
+            fetchOptionSentimentSnapshot(symbol).catch(() => null)
           ]);
-          const input = { symbol, timeframe, candles, source: provider.source, locale };
+          const input = { symbol, timeframe, candles, source: provider.source, locale, shortFlow, optionSentiment };
           const signal = horizon === "swing" ? analyzeSwingSignal(input) : analyzeSignal({ ...input, horizon });
           const ranked = rankScannerResult({ symbol, timeframe, candles, signal, locale, horizon });
           return applyContextBoost(ranked, shortFlow, mood, locale);

@@ -543,6 +543,66 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.snapshot-strip {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #11110d;
+}
+
+.snapshot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.snapshot-head span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.snapshot-tile {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: #14140f;
+}
+
+.snapshot-tile.long {
+  border-color: rgba(79, 185, 159, 0.34);
+}
+
+.snapshot-tile.short {
+  border-color: rgba(225, 95, 65, 0.34);
+}
+
+.snapshot-tile dt {
+  font-size: 11px;
+}
+
+.snapshot-tile dd {
+  margin: 0;
+  font-size: 18px;
+}
+
+.snapshot-tile span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -1085,6 +1145,12 @@ dd {
   color: #ffb7a7;
 }
 
+.pattern-direction.neutral {
+  border: 1px solid rgba(167, 161, 149, 0.32);
+  background: rgba(167, 161, 149, 0.09);
+  color: var(--muted);
+}
+
 .flow-panel {
   display: grid;
   align-content: start;
@@ -1227,6 +1293,151 @@ dd {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.options-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.option-list-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #11110e;
+}
+
+.option-list-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.compact-inline {
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.compact-inline h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.option-contract-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  align-items: center;
+  border: 1px solid rgba(167, 161, 149, 0.18);
+  border-radius: 8px;
+  padding: 6px 7px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.option-contract-row strong {
+  color: var(--text);
+}
+
+.reason-list.compact {
+  margin-top: 0;
+}
+
+.strategy-helper {
+  display: grid;
+  gap: 8px;
+}
+
+.data-badge.subtle {
+  border-color: rgba(167, 161, 149, 0.28);
+  background: rgba(167, 161, 149, 0.08);
+  color: var(--muted);
+}
+
+.strategy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.strategy-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: #11110e;
+}
+
+.strategy-card-top {
+  display: grid;
+  gap: 8px;
+}
+
+.strategy-card-top strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.strategy-card-top span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.strategy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.strategy-meta em {
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.strategy-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.strategy-metrics div,
+.strategy-legs div {
+  border: 1px solid rgba(167, 161, 149, 0.16);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.strategy-legs {
+  display: grid;
+  gap: 6px;
+}
+
+.strategy-legs div {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.strategy-legs b {
+  color: var(--text);
+}
+
+.strategy-legs span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .mood-meter {
@@ -1469,6 +1680,78 @@ dd {
   line-height: 1.6;
 }
 
+.playbook-hub {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.playbook-card,
+.playbook-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.playbook-card {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  padding: 14px;
+  text-align: left;
+  box-shadow: var(--shadow);
+}
+
+.playbook-card.active,
+.playbook-tabs button.active {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.playbook-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--amber);
+}
+
+.playbook-card-top span {
+  display: inline-grid;
+  min-width: 34px;
+  min-height: 26px;
+  place-items: center;
+  border: 1px solid rgba(215, 169, 59, 0.34);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.playbook-card strong {
+  font-size: 18px;
+}
+
+.playbook-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.playbook-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.playbook-tabs button {
+  min-height: 42px;
+  font-weight: 800;
+}
+
 .learn-section-title {
   margin: 24px 0 12px;
 }
@@ -1506,6 +1789,41 @@ dd {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.product-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.product-card {
+  min-height: 340px;
+}
+
+.product-subtitle {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.product-meta {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.product-meta div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: #11110e;
+}
+
+.product-meta dd {
+  margin-top: 5px;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .learn-direction {
@@ -1606,6 +1924,16 @@ dd {
 .candle-diagram .neutral rect {
   fill: var(--amber);
   stroke: var(--amber);
+}
+
+.payoff-diagram .baseline {
+  stroke: rgba(167, 161, 149, 0.34);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.payoff-diagram polyline {
+  stroke: var(--blue);
 }
 
 @media (min-width: 1181px) {
@@ -1733,7 +2061,7 @@ dd {
 
   .chart-panel {
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
     gap: 8px;
     min-width: 0;
     overflow: hidden;
@@ -1774,6 +2102,32 @@ dd {
   .toggle-row {
     gap: 6px;
     margin-bottom: 0;
+  }
+
+  .snapshot-strip {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .snapshot-head span {
+    font-size: 11px;
+  }
+
+  .snapshot-grid {
+    gap: 6px;
+  }
+
+  .snapshot-tile {
+    gap: 2px;
+    padding: 7px;
+  }
+
+  .snapshot-tile dd {
+    font-size: 15px;
+  }
+
+  .snapshot-tile span {
+    font-size: 10px;
   }
 
   .toggle {
@@ -1940,6 +2294,52 @@ dd {
     font-size: 10px;
   }
 
+  .options-lists {
+    gap: 6px;
+  }
+
+  .option-list-card {
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .option-list-card p {
+    font-size: 11px;
+  }
+
+  .option-contract-row {
+    gap: 5px;
+    padding: 5px 6px;
+    font-size: 10px;
+  }
+
+  .strategy-card {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .compact-inline h3 {
+    font-size: 14px;
+  }
+
+  .strategy-card-top strong {
+    font-size: 13px;
+  }
+
+  .strategy-card-top span,
+  .strategy-legs span {
+    font-size: 11px;
+  }
+
+  .strategy-metrics {
+    gap: 6px;
+  }
+
+  .strategy-metrics div,
+  .strategy-legs div {
+    padding: 6px 7px;
+  }
+
   .ai-panel {
     grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
     min-height: 0;
@@ -2064,8 +2464,19 @@ dd {
     flex-direction: column;
   }
 
+  .playbook-hub,
+  .playbook-tabs,
   .learn-grid {
     grid-template-columns: 1fr;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .snapshot-grid,
+  .options-lists {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -2082,5 +2493,19 @@ dd {
   .metric-grid,
   .indicator-grid {
     grid-template-columns: 1fr;
+  }
+
+  .snapshot-grid,
+  .options-lists {
+    grid-template-columns: 1fr;
+  }
+
+  .snapshot-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .option-contract-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

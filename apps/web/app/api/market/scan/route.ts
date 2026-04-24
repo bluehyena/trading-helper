@@ -10,6 +10,7 @@ import {
   type Timeframe,
   type TradingHorizon
 } from "@trading-helper/core";
+import { fetchOptionSentimentSnapshot } from "@trading-helper/core/server";
 
 export const runtime = "nodejs";
 
@@ -45,13 +46,17 @@ export async function POST(request: Request) {
     const batchResults = await Promise.all(
       batch.map(async (symbol) => {
         try {
-          const candles = await provider.getCandles(symbol, scanTimeframe);
+          const [candles, optionSentiment] = await Promise.all([
+            provider.getCandles(symbol, scanTimeframe),
+            fetchOptionSentimentSnapshot(symbol).catch(() => null)
+          ]);
           const input = {
             symbol,
             timeframe: scanTimeframe,
             candles,
             locale,
-            source: provider.source
+            source: provider.source,
+            optionSentiment
           };
           const signal = horizon === "swing" ? analyzeSwingSignal(input) : analyzeSignal({ ...input, horizon });
 

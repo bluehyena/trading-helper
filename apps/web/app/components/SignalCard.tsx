@@ -2,7 +2,7 @@
 
 import type { AppLocale, PatternDirection, SignalResult } from "@trading-helper/core";
 import { Activity, ShieldAlert, TrendingDown, TrendingUp } from "lucide-react";
-import { formatCurrency, formatDateTime } from "../lib/format";
+import { formatCurrency, formatDateTime, formatNumber } from "../lib/format";
 import type { UiMessages } from "../messages";
 
 interface SignalCardProps {
@@ -80,6 +80,21 @@ export function SignalCard({ locale, labels, signal }: SignalCardProps) {
             ))}
           </p>
         )}
+        {signal.optionsSentiment && (
+          <p className="pattern-summary">
+            <span className="pattern-token">
+              <span className="pattern-name">{locale === "en" ? "Options" : "옵션"}</span>
+              <span className={`pattern-direction ${biasClass(signal.optionsSentiment.bias)}`}>
+                {optionsLabel(signal.optionsSentiment.bias, locale)}
+              </span>
+            </span>
+            {signal.optionsSentiment.putCallVolumeRatio !== null && (
+              <span className="pattern-token">
+                <span className="pattern-name">PCR {formatNumber(signal.optionsSentiment.putCallVolumeRatio, 2)}</span>
+              </span>
+            )}
+          </p>
+        )}
         {signal.reasons.slice(0, 4).map((reason) => (
           <p key={reason}>{reason}</p>
         ))}
@@ -92,6 +107,36 @@ export function SignalCard({ locale, labels, signal }: SignalCardProps) {
       )}
     </section>
   );
+}
+
+function optionsLabel(bias: SignalResult["bias"], locale: AppLocale): string {
+  if (locale === "en") {
+    if (bias === "LONG") {
+      return "Call skew";
+    }
+    if (bias === "SHORT") {
+      return "Put skew";
+    }
+    return "Balanced";
+  }
+
+  if (bias === "LONG") {
+    return "콜 우위";
+  }
+  if (bias === "SHORT") {
+    return "풋 우위";
+  }
+  return "균형";
+}
+
+function biasClass(bias: SignalResult["bias"]): "long" | "short" | "neutral" {
+  if (bias === "LONG") {
+    return "long";
+  }
+  if (bias === "SHORT") {
+    return "short";
+  }
+  return "neutral";
 }
 
 function directionLabel(direction: PatternDirection, locale: AppLocale): string {

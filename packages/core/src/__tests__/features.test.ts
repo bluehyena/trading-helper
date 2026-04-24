@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeSignal,
   analyzeSwingSignal,
+  buildDarkPoolSnapshot,
   buildMarketMoodSnapshot,
+  classifyOptionVolatilityRegime,
   calculateSpread,
   calculateTradeReturn,
   detectChartPatterns,
@@ -24,6 +26,8 @@ import {
   type Candle,
   type RealtimeTrade
 } from "../index";
+import { buildOptionSentimentSnapshot } from "../market/options";
+import { buildOptionStrategyRecommendations } from "../market/options-strategies";
 
 describe("extended market features", () => {
   it("supports daily, weekly, and monthly timeframes", () => {
@@ -199,6 +203,80 @@ describe("extended market features", () => {
     expect(ftd[0].quantity).toBe(1200);
   });
 
+  it("builds options sentiment from front-expiry call/put imbalance", () => {
+    const snapshot = buildOptionSentimentSnapshot({
+      symbol: "AAPL",
+      expiration: "2026-05-17T00:00:00.000Z",
+      underlyingPrice: 200,
+      calls: [
+        { contractSymbol: "AAPL260517C00200000", strike: 200, volume: 4_200, openInterest: 9_500, impliedVolatility: 0.29 },
+        { contractSymbol: "AAPL260517C00205000", strike: 205, volume: 2_100, openInterest: 5_000, impliedVolatility: 0.31 }
+      ],
+      puts: [
+        { contractSymbol: "AAPL260517P00200000", strike: 200, volume: 1_200, openInterest: 3_200, impliedVolatility: 0.27 }
+      ]
+    });
+
+    expect(snapshot.bias).toBe("LONG");
+    expect(snapshot.putCallVolumeRatio).toBeLessThan(1);
+    expect(snapshot.topCalls).toHaveLength(2);
+    expect(snapshot.strategyRecommendations.length).toBeGreaterThan(0);
+  });
+
+  it("maps outlook and volatility to option strategy recommendations", () => {
+    const recommendations = buildOptionStrategyRecommendations({
+      underlyingPrice: 200,
+      expiration: "2026-05-17T00:00:00.000Z",
+      calls: [
+        optionContract("CALL", 195, 8.4),
+        optionContract("CALL", 200, 5.1),
+        optionContract("CALL", 205, 3.2),
+        optionContract("CALL", 210, 1.8)
+      ],
+      puts: [
+        optionContract("PUT", 190, 1.7),
+        optionContract("PUT", 195, 2.9),
+        optionContract("PUT", 200, 4.8),
+        optionContract("PUT", 205, 7.5)
+      ],
+      bias: "LONG",
+      volatilityRegime: "LOW"
+    });
+
+    expect(recommendations[0]?.id).toBe("bull_call_spread");
+    expect(recommendations[0]?.legs.length).toBeGreaterThan(1);
+    expect(recommendations[0]?.breakEvenPrices.length).toBeGreaterThan(0);
+  });
+
+  it("classifies options volatility regimes from ATM IV", () => {
+    expect(classifyOptionVolatilityRegime(0.24, 0.27)).toBe("LOW");
+    expect(classifyOptionVolatilityRegime(0.34, 0.36)).toBe("MEDIUM");
+    expect(classifyOptionVolatilityRegime(0.48, 0.52)).toBe("HIGH");
+  });
+
+  it("builds a dark-pool ATS proxy ratio against short volume", () => {
+    const snapshot = buildDarkPoolSnapshot({
+      symbol: "AAPL",
+      weekStartDate: "2026-04-20",
+      tier: "T1",
+      totalWeeklyShares: 4_500_000,
+      totalWeeklyTrades: 12_500,
+      shortSaleVolume: {
+        symbol: "AAPL",
+        date: "2026-04-22",
+        shortVolume: 900_000,
+        totalVolume: 1_800_000,
+        shortExemptVolume: 0,
+        shortVolumeRatio: 0.5,
+        source: "fixture"
+      }
+    });
+
+    expect(snapshot.atsToShortVolumeRatio).toBeCloseTo(5, 1);
+    expect(snapshot.atsShareOfShortVolumePercent).toBeCloseTo(500, 1);
+    expect(snapshot.tier).toBe("T1");
+  });
+
   it("builds market mood and trade return calculations", () => {
     const mood = buildMarketMoodSnapshot({
       vixQuote: {
@@ -297,5 +375,20 @@ function trade(price: number, size: number, timestamp = "2026-04-22T14:30:00.000
     price,
     size,
     timestamp
+  };
+}
+
+function optionContract(side: "CALL" | "PUT", strike: number, lastPrice: number) {
+  return {
+    contractSymbol: `${side}-${strike}`,
+    side,
+    strike,
+    expiration: "2026-05-17T00:00:00.000Z",
+    lastPrice,
+    volume: 1000,
+    openInterest: 2000,
+    impliedVolatility: 0.28,
+    inTheMoney: side === "CALL" ? strike <= 200 : strike >= 200,
+    distanceFromSpotPercent: Math.abs(strike - 200) / 200
   };
 }
