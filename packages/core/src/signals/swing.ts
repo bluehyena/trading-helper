@@ -1,5 +1,13 @@
 import { clamp, indicatorSnapshot, round } from "../indicators";
-import type { AppLocale, Candle, SignalBias, SignalResult, Timeframe } from "../types";
+import type {
+  AppLocale,
+  Candle,
+  OptionSentimentSnapshot,
+  ShortFlowSnapshot,
+  SignalBias,
+  SignalResult,
+  Timeframe
+} from "../types";
 import { detectChartPatterns } from "./chart-patterns";
 import { detectCandlestickPatterns } from "./patterns";
 import { isDataStale, minutesSinceLatestCandle } from "./staleness";
@@ -11,35 +19,40 @@ interface AnalyzeSwingSignalInput {
   source: string;
   locale?: AppLocale;
   now?: Date;
+  optionSentiment?: OptionSentimentSnapshot | null;
+  shortFlow?: ShortFlowSnapshot | null;
 }
 
 const copy = {
   ko: {
     analysisOnly: "스윙 관점의 분석 보조 결과입니다. 투자 판단과 손실 책임은 사용자에게 있습니다.",
     noCandles: "스윙 분석에 사용할 캔들 데이터가 없습니다.",
-    tooFewCandles: "스윙 분석에는 일봉/주봉 이력이 더 필요합니다. 신뢰도를 낮게 봐야 합니다.",
+    tooFewCandles: "스윙 분석은 더 긴 일봉/주봉 이력이 필요해 신뢰도를 낮춰 봐야 합니다.",
     stale: (minutes: number) => `마지막 캔들이 약 ${minutes}분 전 데이터입니다.`,
     trendBull: "중기 이동평균 배열이 상승 추세를 지지합니다.",
     trendBear: "중기 이동평균 배열이 하락 추세를 지지합니다.",
-    aboveSma50: "가격이 SMA50 위에서 유지되고 있습니다.",
+    aboveSma50: "가격이 SMA50 위에 있어 중기 방어 흐름이 유지됩니다.",
     belowSma50: "가격이 SMA50 아래에 있어 스윙 약세가 우세할 수 있습니다.",
     aboveEma200: "가격이 EMA200 위에 있어 큰 추세가 우호적입니다.",
-    belowEma200: "가격이 EMA200 아래에 있어 큰 추세 리스크가 큽니다.",
+    belowEma200: "가격이 EMA200 아래에 있어 큰 추세 리스크가 남아 있습니다.",
     rsiBull: "RSI가 스윙 상승 모멘텀 구간입니다.",
     rsiBear: "RSI가 스윙 약세 모멘텀 구간입니다.",
     rsiHot: "RSI가 과열권입니다. 스윙 추격 진입 리스크가 큽니다.",
     rsiCold: "RSI가 과매도권입니다. 늦은 숏 추격은 위험할 수 있습니다.",
-    macdBull: "MACD 히스토그램이 양수로 중기 모멘텀이 개선 중입니다.",
-    macdBear: "MACD 히스토그램이 음수로 중기 모멘텀이 약합니다.",
-    volume: (value: number) => `거래량이 평균 대비 ${round(value, 2)}배로 확대되었습니다.`,
-    support: "최근 지지선 근처에서 반등 가능 구간입니다.",
-    resistance: "최근 저항선 근처라 돌파 실패 리스크가 있습니다.",
-    noEdge: "스윙 관점에서 뚜렷한 우위가 아직 확인되지 않았습니다."
+    macdBull: "MACD 히스토그램이 양수라 중기 모멘텀이 개선 중입니다.",
+    macdBear: "MACD 히스토그램이 음수라 중기 모멘텀이 약합니다.",
+    volume: (value: number) => `거래량이 평균 대비 ${round(value, 2)}배로 증가했습니다.`,
+    support: "최근 지지 부근에서 반등 가능 구간입니다.",
+    resistance: "최근 저항 부근이라 돌파 실패 리스크를 봐야 합니다.",
+    optionsBull: "옵션 포지셔닝이 스윙 롱 쪽에 조금 더 우호적입니다.",
+    optionsBear: "옵션 포지셔닝이 스윙 숏 쪽에 조금 더 우호적입니다.",
+    darkPoolProxy: "FINRA ATS 다크풀 거래량이 높아 스윙 재료 해석에 숨은 유동성도 참고해야 합니다.",
+    noEdge: "스윙 관점에서 아직 뚜렷한 방향 우위가 확인되지 않았습니다."
   },
   en: {
     analysisOnly: "Swing-horizon analysis support only. Investment decisions and losses remain the user's responsibility.",
     noCandles: "No candle data is available for swing analysis.",
-    tooFewCandles: "Swing analysis needs more daily/weekly history, so confidence should be reduced.",
+    tooFewCandles: "Swing analysis needs more daily or weekly history, so confidence should be reduced.",
     stale: (minutes: number) => `The latest candle is about ${minutes} minutes old.`,
     trendBull: "Medium-term moving-average alignment supports an uptrend.",
     trendBear: "Medium-term moving-average alignment supports a downtrend.",
@@ -56,6 +69,9 @@ const copy = {
     volume: (value: number) => `Volume has expanded to ${round(value, 2)}x average.`,
     support: "Price is near recent support, where swing buyers may defend.",
     resistance: "Price is near recent resistance, so breakout failure risk is elevated.",
+    optionsBull: "Options positioning is modestly supportive of the swing long case.",
+    optionsBear: "Options positioning is modestly supportive of the swing short case.",
+    darkPoolProxy: "FINRA ATS dark-pool activity is elevated, so hidden-liquidity context may matter for swing interpretation.",
     noEdge: "No clear swing edge has been confirmed yet."
   }
 } satisfies Record<AppLocale, Record<string, string | ((value: number) => string)>>;
@@ -66,7 +82,9 @@ export function analyzeSwingSignal({
   candles,
   source,
   locale = "ko",
-  now = new Date()
+  now = new Date(),
+  optionSentiment = null,
+  shortFlow = null
 }: AnalyzeSwingSignalInput): SignalResult {
   const t = copy[locale];
   const indicators = indicatorSnapshot(candles);
@@ -93,6 +111,7 @@ export function analyzeSwingSignal({
       indicators,
       patterns,
       chartPatterns,
+      optionsSentiment: optionSentiment,
       dataTimestamp: now.toISOString(),
       source
     };
@@ -183,16 +202,28 @@ export function analyzeSwingSignal({
     reasons.push(t.resistance as string);
   }
 
+  if (optionSentiment?.bias === "LONG") {
+    score += 0.45;
+    reasons.push(t.optionsBull as string);
+  } else if (optionSentiment?.bias === "SHORT") {
+    score -= 0.45;
+    reasons.push(t.optionsBear as string);
+  }
+
+  if ((shortFlow?.darkPool?.atsToShortVolumeRatio ?? 0) >= 8) {
+    warnings.push(t.darkPoolProxy as string);
+  }
+
   for (const pattern of patterns) {
     const weight = pattern.strength === "HIGH" ? 0.55 : 0.28;
     score += pattern.direction === "BULLISH" ? weight : -weight;
-    reasons.push(locale === "en" ? `${pattern.label.en} candle pattern detected.` : `${pattern.label.ko} 캔들 패턴이 감지되었습니다.`);
+    reasons.push(locale === "en" ? `${pattern.label.en} candle pattern detected.` : `${pattern.label.ko} 캔들 패턴이 감지됐습니다.`);
   }
 
   for (const pattern of chartPatterns) {
     const weight = pattern.strength === "HIGH" ? 1 : pattern.strength === "MEDIUM" ? 0.65 : 0.35;
     score += pattern.direction === "BULLISH" ? weight : -weight;
-    reasons.push(locale === "en" ? `${pattern.label.en} chart pattern detected.` : `${pattern.label.ko} 차트 형태가 감지되었습니다.`);
+    reasons.push(locale === "en" ? `${pattern.label.en} chart pattern detected.` : `${pattern.label.ko} 차트 패턴이 감지됐습니다.`);
   }
 
   const bias = score >= 2.6 ? "LONG" : score <= -2.6 ? "SHORT" : "NEUTRAL";
@@ -216,6 +247,7 @@ export function analyzeSwingSignal({
     ) as SignalResult["indicators"],
     patterns,
     chartPatterns,
+    optionsSentiment: optionSentiment,
     dataTimestamp: latest.time,
     source
   };

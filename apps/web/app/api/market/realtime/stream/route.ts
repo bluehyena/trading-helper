@@ -10,6 +10,7 @@ import {
   type RealtimeQuote,
   type RealtimeTrade
 } from "@trading-helper/core";
+import { fetchOptionSentimentSnapshot } from "@trading-helper/core/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,7 @@ export async function GET(request: Request) {
   return sseResponse(async (send, close, signal) => {
     const aggregator = new RealtimeCandleAggregator(timeframe);
     let latestQuote: RealtimeQuote | null = null;
+    const optionSentiment = await fetchOptionSentimentSnapshot(symbol).catch(() => null);
 
     send("status", {
       configured: true,
@@ -65,7 +67,8 @@ export async function GET(request: Request) {
           latestQuote: () => latestQuote,
           aggregator,
           symbol,
-          timeframe
+          timeframe,
+          optionSentiment
         });
       }
     } catch (error) {
@@ -86,6 +89,7 @@ function handleProviderEvent(
     aggregator: RealtimeCandleAggregator;
     symbol: string;
     timeframe: "1s" | "5s" | "15s";
+    optionSentiment: Awaited<ReturnType<typeof fetchOptionSentimentSnapshot>> | null;
   }
 ) {
   if (event.type === "status") {
@@ -115,7 +119,8 @@ function handleProviderEvent(
     timeframe: context.timeframe,
     candles,
     source: POLYGON_REALTIME_SOURCE,
-    locale: context.locale
+    locale: context.locale,
+    optionSentiment: context.optionSentiment
   });
 
   context.send("trade", trade);

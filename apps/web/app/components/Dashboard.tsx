@@ -36,7 +36,9 @@ import { AiChat } from "./AiChat";
 import { AgentReportPanel } from "./AgentReportPanel";
 import { CandlestickChart, type IndicatorToggles } from "./CandlestickChart";
 import { FlowPanel } from "./FlowPanel";
+import { MarketPulseStrip } from "./MarketPulseStrip";
 import { MarketMoodPanel } from "./MarketMoodPanel";
+import { OptionsPanel } from "./OptionsPanel";
 import { ProfitCalculator } from "./ProfitCalculator";
 import { RiskPanel } from "./RiskPanel";
 import { SignalCard } from "./SignalCard";
@@ -574,7 +576,7 @@ export function Dashboard() {
           </div>
           <Link className="learn-link" href="/learn">
             <BookOpen size={17} aria-hidden />
-            {t.nav.learn}
+            {locale === "en" ? "Playbook" : "플레이북"}
           </Link>
           <div className="language-switch" aria-label={t.language.label}>
             {(["ko", "en"] as AppLocale[]).map((item) => (
@@ -806,6 +808,7 @@ export function Dashboard() {
               {t.realtime[realtimeStatusKind]}
             </span>
           </div>
+          <MarketPulseStrip isRealtime={isRealtime} locale={locale} shortFlow={shortFlow} signal={payload?.signal ?? null} />
           {error && <div className="error-box">{error}</div>}
           {!error && payload && payload.candles.length > 0 && (
             <CandlestickChart
@@ -826,6 +829,7 @@ export function Dashboard() {
         <section className="side-stack">
           <SignalCard locale={locale} labels={t.signal} signal={payload?.signal ?? null} />
           <RiskPanel labels={t.risk} signal={payload?.signal ?? null} />
+          <OptionsPanel locale={locale} snapshot={payload?.signal.optionsSentiment ?? null} />
           <FlowPanel candles={payload?.candles ?? []} locale={locale} signal={payload?.signal ?? null} />
           <ShortFlowPanel locale={locale} snapshot={shortFlow} />
           <MarketMoodPanel locale={locale} mood={marketMood} />

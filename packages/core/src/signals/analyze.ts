@@ -1,5 +1,15 @@
 import { clamp, indicatorSnapshot, round } from "../indicators";
-import type { AppLocale, Candle, IndicatorSnapshot, SignalBias, SignalResult, Timeframe, TradingHorizon } from "../types";
+import type {
+  AppLocale,
+  Candle,
+  IndicatorSnapshot,
+  OptionSentimentSnapshot,
+  ShortFlowSnapshot,
+  SignalBias,
+  SignalResult,
+  Timeframe,
+  TradingHorizon
+} from "../types";
 import { detectChartPatterns } from "./chart-patterns";
 import { detectCandlestickPatterns } from "./patterns";
 import { isDataStale, minutesSinceLatestCandle } from "./staleness";
@@ -12,36 +22,41 @@ interface AnalyzeSignalInput {
   locale?: AppLocale;
   now?: Date;
   horizon?: TradingHorizon;
+  optionSentiment?: OptionSentimentSnapshot | null;
+  shortFlow?: ShortFlowSnapshot | null;
 }
 
 const signalCopy = {
   ko: {
     analysisOnly:
-      "무료 공개 데이터 기반의 분석 보조입니다. 실시간 체결/호가가 아니며 주문 기능을 제공하지 않습니다.",
-    noCandles: "분석할 캔들 데이터가 없습니다.",
-    tooFewCandles: "캔들 수가 적어 EMA50/장중 구조 판단의 신뢰도가 낮습니다.",
+      "무료 공개 데이터를 기반으로 한 분석 보조입니다. 실시간 주문 체결 데이터가 아니며 주문 기능도 제공하지 않습니다.",
+    noCandles: "분석에 사용할 캔들 데이터가 없습니다.",
+    tooFewCandles: "캔들 수가 적어 EMA50과 단기 구조 판단의 신뢰도가 제한됩니다.",
     stale: (minutes: number) => `마지막 캔들이 약 ${minutes}분 전 데이터입니다.`,
-    emaBull: "단기 EMA 배열이 상승 방향입니다.",
-    emaBear: "단기 EMA 배열이 하락 방향입니다.",
-    emaMixed: "단기 EMA 배열이 혼재되어 방향성이 약합니다.",
-    aboveEma50: "현재가가 EMA50 위에서 유지되고 있습니다.",
-    belowEma50: "현재가가 EMA50 아래에 있어 매도 압력이 우세할 수 있습니다.",
+    emaBull: "단기 EMA 배열이 상승 쪽으로 정렬돼 있습니다.",
+    emaBear: "단기 EMA 배열이 하락 쪽으로 정렬돼 있습니다.",
+    emaMixed: "단기 EMA 배열이 섞여 있어 방향성이 약합니다.",
+    aboveEma50: "현재가가 EMA50 위에 있어 추세 유지 가능성이 있습니다.",
+    belowEma50: "현재가가 EMA50 아래에 있어 매도 압력이 더 강할 수 있습니다.",
     aboveVwap: "가격이 VWAP 위에 있어 장중 매수 우위가 감지됩니다.",
     belowVwap: "가격이 VWAP 아래에 있어 장중 매도 우위가 감지됩니다.",
     rsiBull: "RSI가 과열 전의 상승 모멘텀 구간입니다.",
     rsiBear: "RSI가 약세 모멘텀 구간입니다.",
-    rsiOverbought: "RSI 과열권입니다. 추격 진입 리스크가 큽니다.",
-    rsiOversold: "RSI 과매도권입니다. 숏 추격 리스크가 큽니다.",
-    macdBull: "MACD 히스토그램이 양수로 모멘텀 개선을 시사합니다.",
-    macdBear: "MACD 히스토그램이 음수로 모멘텀 약화를 시사합니다.",
-    relVolume: (value: number) => `상대 거래량이 ${round(value, 2)}배로 증가했습니다.`,
-    nearSupport: "가격이 최근 지지선 근처에서 반응 중입니다.",
-    nearResistance: "가격이 최근 저항선 근처라 돌파 실패 리스크가 있습니다.",
-    noEdge: "뚜렷한 방향성 우위가 아직 확인되지 않았습니다."
+    rsiOverbought: "RSI 과열권입니다. 추격 롱 진입 리스크가 큽니다.",
+    rsiOversold: "RSI 과매도권입니다. 늦은 숏 추격 리스크가 큽니다.",
+    macdBull: "MACD 히스토그램이 양수라 모멘텀 개선 흐름을 시사합니다.",
+    macdBear: "MACD 히스토그램이 음수라 모멘텀 약화 흐름을 시사합니다.",
+    relVolume: (value: number) => `상대 거래량이 ${round(value, 2)}배로 확대됐습니다.`,
+    nearSupport: "가격이 최근 지지 부근에서 반응 중입니다.",
+    nearResistance: "가격이 최근 저항 부근이라 돌파 실패 리스크가 있습니다.",
+    optionsBull: "근월물 옵션 흐름이 콜 우위입니다.",
+    optionsBear: "근월물 옵션 흐름이 풋 우위입니다.",
+    darkPoolProxy: "FINRA ATS 다크풀 거래량이 높아 숨은 유동성 활동도 함께 참고해야 합니다.",
+    noEdge: "아직 뚜렷한 방향 우위가 확인되지 않았습니다."
   },
   en: {
     analysisOnly:
-      "Analysis-only output based on free public data. It is not live order-book/execution data and does not provide order execution.",
+      "Analysis-only output based on free public data. It is not live order-book or execution data and does not place orders.",
     noCandles: "No candle data is available for analysis.",
     tooFewCandles: "The candle history is short, so EMA50 and intraday-structure confidence is limited.",
     stale: (minutes: number) => `The latest candle is about ${minutes} minutes old.`,
@@ -61,6 +76,9 @@ const signalCopy = {
     relVolume: (value: number) => `Relative volume has expanded to ${round(value, 2)}x.`,
     nearSupport: "Price is reacting near recent support.",
     nearResistance: "Price is near recent resistance, so breakout-failure risk is elevated.",
+    optionsBull: "Front-expiry options flow is tilted toward calls.",
+    optionsBear: "Front-expiry options flow is tilted toward puts.",
+    darkPoolProxy: "FINRA ATS dark-pool activity is elevated, so hidden-liquidity context may matter.",
     noEdge: "No clear directional edge has been confirmed yet."
   }
 } satisfies Record<AppLocale, Record<string, string | ((value: number) => string)>>;
@@ -72,7 +90,9 @@ export function analyzeSignal({
   source,
   locale = "ko",
   now = new Date(),
-  horizon = "scalp"
+  horizon = "scalp",
+  optionSentiment = null,
+  shortFlow = null
 }: AnalyzeSignalInput): SignalResult {
   const copy = signalCopy[locale];
   const indicators = indicatorSnapshot(candles);
@@ -99,6 +119,7 @@ export function analyzeSignal({
       indicators,
       patterns,
       chartPatterns,
+      optionsSentiment: optionSentiment,
       dataTimestamp: now.toISOString(),
       source
     };
@@ -140,11 +161,7 @@ export function analyzeSignal({
   }
 
   if (indicators.ema200) {
-    if (close > indicators.ema200) {
-      score += 0.6;
-    } else {
-      score -= 0.6;
-    }
+    score += close > indicators.ema200 ? 0.6 : -0.6;
   }
 
   if (indicators.vwap) {
@@ -199,6 +216,18 @@ export function analyzeSignal({
     reasons.push(copy.nearResistance as string);
   }
 
+  if (optionSentiment?.bias === "LONG") {
+    score += 0.85;
+    reasons.push(copy.optionsBull as string);
+  } else if (optionSentiment?.bias === "SHORT") {
+    score -= 0.85;
+    reasons.push(copy.optionsBear as string);
+  }
+
+  if ((shortFlow?.darkPool?.atsToShortVolumeRatio ?? 0) >= 8) {
+    warnings.push(copy.darkPoolProxy as string);
+  }
+
   for (const pattern of patterns) {
     if (pattern.direction === "BULLISH") {
       score += pattern.strength === "HIGH" ? 0.7 : 0.35;
@@ -211,12 +240,8 @@ export function analyzeSignal({
 
   for (const pattern of chartPatterns) {
     const weight = pattern.strength === "HIGH" ? 0.9 : pattern.strength === "MEDIUM" ? 0.55 : 0.3;
-    if (pattern.direction === "BULLISH") {
-      score += weight;
-    } else {
-      score -= weight;
-    }
-    reasons.push(locale === "en" ? `${pattern.label.en} chart pattern detected.` : `${pattern.label.ko} 차트 형태가 감지됐습니다.`);
+    score += pattern.direction === "BULLISH" ? weight : -weight;
+    reasons.push(locale === "en" ? `${pattern.label.en} chart pattern detected.` : `${pattern.label.ko} 차트 패턴이 감지됐습니다.`);
   }
 
   const bias = score >= 2.2 ? "LONG" : score <= -2.2 ? "SHORT" : "NEUTRAL";
@@ -238,6 +263,7 @@ export function analyzeSignal({
     indicators: roundIndicators(indicators),
     patterns,
     chartPatterns,
+    optionsSentiment: optionSentiment,
     dataTimestamp: latest.time,
     source
   };

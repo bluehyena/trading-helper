@@ -1,9 +1,11 @@
 import type {
+  DarkPoolSnapshot,
   FailsToDeliverRecord,
   ShortFlowSnapshot,
   ShortInterestRecord,
   ShortSaleVolumeRecord
 } from "../types";
+import { fetchDarkPoolSnapshot } from "./dark-pool";
 
 export const SHORT_FLOW_SOURCE =
   "FINRA/SEC public delayed files (short interest, Reg SHO short-sale volume, fails-to-deliver)";
@@ -19,6 +21,7 @@ interface ShortFlowBuildInput {
   shortInterestRecords?: ShortInterestRecord[];
   shortSaleVolumeRecords?: ShortSaleVolumeRecord[];
   failsToDeliverRecords?: FailsToDeliverRecord[];
+  darkPool?: DarkPoolSnapshot | null;
   warnings?: string[];
   now?: Date;
 }
@@ -28,6 +31,7 @@ export function buildShortFlowSnapshot({
   shortInterestRecords = [],
   shortSaleVolumeRecords = [],
   failsToDeliverRecords = [],
+  darkPool = null,
   warnings = [],
   now = new Date()
 }: ShortFlowBuildInput): ShortFlowSnapshot {
@@ -46,6 +50,7 @@ export function buildShortFlowSnapshot({
     shortInterest,
     shortSaleVolume,
     failsToDeliver,
+    darkPool,
     warnings: [
       "Short-related public data is delayed and must not be treated as real-time order flow.",
       ...missingWarnings,
@@ -145,11 +150,22 @@ export async function fetchShortFlowSnapshot(
     fetchOptionalText(env.SEC_FTD_TXT_URL, fetchFn, warnings, "SEC fails-to-deliver")
   ]);
 
+  const shortInterestRecords = shortInterestCsv ? parseFinraShortInterestCsv(shortInterestCsv, env.FINRA_SHORT_INTEREST_CSV_URL) : [];
+  const shortSaleVolumeRecords = shortVolumeCsv ? parseFinraShortSaleVolumeCsv(shortVolumeCsv, env.FINRA_SHORT_VOLUME_CSV_URL) : [];
+  const failsToDeliverRecords = ftdText ? parseSecFailsToDeliverText(ftdText, env.SEC_FTD_TXT_URL) : [];
+  const normalizedSymbol = symbol.toUpperCase();
+  const latestShortSaleVolume = latestByDate(
+    shortSaleVolumeRecords.filter((record) => record.symbol === normalizedSymbol),
+    "date"
+  );
+  const darkPool = await fetchDarkPoolSnapshot(normalizedSymbol, latestShortSaleVolume, fetchFn);
+
   return buildShortFlowSnapshot({
     symbol,
-    shortInterestRecords: shortInterestCsv ? parseFinraShortInterestCsv(shortInterestCsv, env.FINRA_SHORT_INTEREST_CSV_URL) : [],
-    shortSaleVolumeRecords: shortVolumeCsv ? parseFinraShortSaleVolumeCsv(shortVolumeCsv, env.FINRA_SHORT_VOLUME_CSV_URL) : [],
-    failsToDeliverRecords: ftdText ? parseSecFailsToDeliverText(ftdText, env.SEC_FTD_TXT_URL) : [],
+    shortInterestRecords,
+    shortSaleVolumeRecords,
+    failsToDeliverRecords,
+    darkPool,
     warnings
   });
 }

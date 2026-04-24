@@ -8,6 +8,7 @@ import {
   type AppLocale,
   type TradingHorizon
 } from "@trading-helper/core";
+import { fetchOptionSentimentSnapshot } from "@trading-helper/core/server";
 
 const provider = createMarketDataProvider();
 
@@ -27,13 +28,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const candles = await provider.getCandles(symbol, timeframe);
+    const [candles, optionSentiment] = await Promise.all([
+      provider.getCandles(symbol, timeframe),
+      fetchOptionSentimentSnapshot(symbol).catch(() => null)
+    ]);
     const signalInput = {
       symbol,
       timeframe,
       candles,
       source: provider.source,
-      locale
+      locale,
+      optionSentiment
     };
     const signal = horizon === "swing" ? analyzeSwingSignal(signalInput) : analyzeSignal({ ...signalInput, horizon });
 

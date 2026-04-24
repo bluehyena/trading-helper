@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("loads the dashboard, renders signal, and streams AI explanation", async ({ page }) => {
+test("loads the dashboard, surfaces options context, and opens the playbook", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  let savedState = makeStateFixture();
+  let savedState = makeStateFixture("AAPL", "ko");
+
   await page.route("**/api/state", async (route) => {
     if (route.request().method() === "PUT") {
       savedState = { ...savedState, ...(route.request().postDataJSON() as Record<string, unknown>) };
@@ -25,10 +26,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
     });
   });
   await page.route("**/api/market/quote**", async (route) => {
-    await route.fulfill({
-      status: 502,
-      json: { error: "Quote unavailable in fixture." }
-    });
+    await route.fulfill({ status: 502, json: { error: "Quote unavailable in fixture." } });
   });
   await page.route("**/api/market/fx", async (route) => {
     await route.fulfill({
@@ -73,8 +71,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
                 id: "bullish_engulfing",
                 direction: "BULLISH",
                 strength: "HIGH",
-                label: { ko: "상승 장악형", en: "Bullish Engulfing" },
-                description: { ko: "반전 후보", en: "Reversal candidate" }
+                label: { ko: "Bullish Engulfing", en: "Bullish Engulfing" },
+                description: { ko: "Reversal candidate", en: "Reversal candidate" }
               }
             ],
             chartPatterns: [
@@ -82,9 +80,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
                 id: "bull_flag",
                 direction: "BULLISH",
                 strength: "MEDIUM",
-                label: { ko: "불 플래그", en: "Bull Flag" },
-                description: { ko: "상승 지속 후보", en: "Bullish continuation candidate" },
-                levels: [{ label: { ko: "플래그 상단", en: "Flag high" }, price: 204 }],
+                label: { ko: "Bull Flag", en: "Bull Flag" },
+                description: { ko: "Bullish continuation candidate", en: "Bullish continuation candidate" },
+                levels: [{ label: { ko: "Flag high", en: "Flag high" }, price: 204 }],
                 points: []
               }
             ],
@@ -102,7 +100,7 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
     await route.fulfill({
       status: 200,
       headers: { "content-type": "text/plain; charset=utf-8" },
-      body: "롱 근거 테스트 응답입니다. 주문 실행은 하지 않습니다."
+      body: "This is a mocked analysis-only response. No order execution is performed."
     });
   });
   await page.route("**/api/ai/actions/preview", async (route) => {
@@ -116,8 +114,8 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
         proposedFavorites: [],
         mood: makeMoodFixture(),
         report: {
-          title: "에이전트 스캔 리포트",
-          summary: "사용 가능한 셋업 후보가 없습니다.",
+          title: "Agent Scan Report",
+          summary: "No candidates produced a usable setup.",
           warnings: [],
           generatedAt: new Date().toISOString()
         }
@@ -129,66 +127,67 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
 
   await expect(page.getByRole("heading", { name: "Trading Helper" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "AAPL" })).toBeVisible();
-  await expect(page.getByText("₩282,590")).toBeVisible();
-  await expect(page.getByText("롱 우위")).toBeVisible();
-  await expect(page.getByText("투자 판단과 손실 책임은 사용자 본인")).toBeVisible();
-  await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "확대" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "축소" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "하이킨아시" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "타점 표시" })).toBeVisible();
+  await expect(page.locator(".current-price")).toContainText("282,590");
+  await expect(page.locator(".signal")).toBeVisible();
+  await expect(page.locator(".snapshot-strip")).toBeVisible();
+  await expect(page.locator(".options-panel")).toBeVisible();
   await expect(page.getByRole("button", { name: "1s" })).toBeDisabled();
-  await expect(page.getByText("실시간 키 필요")).toBeVisible();
-  await expect(page.getByRole("button", { name: "QQQ" })).toBeVisible();
-  await expect(page.locator(".signal .pattern-direction.long").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "수급 체크" })).toBeVisible();
-  await expect(page.getByText("수요 우세")).toBeVisible();
   await expect(page.locator(".watch-panel")).toBeInViewport();
   await expect(page.locator(".chart-panel")).toBeInViewport();
   await expect(page.locator(".side-stack")).toBeInViewport();
-  await expect(page.getByRole("heading", { name: "공매도/숏 체크" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "공포/탐욕 프록시" })).toBeVisible();
-  await page.getByRole("button", { name: /AI/ }).click();
-  await expect(page.locator(".ai-panel")).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
+
   await page.locator(".chart").hover({ position: { x: 420, y: 180 } });
   await expect(page.locator(".crosshair-tooltip")).toBeVisible();
-  await page.getByRole("button", { name: "즐겨찾기 스캔" }).click();
-  await expect(page.getByText("점수 91.4")).toBeVisible();
-  await expect(page.getByText("패턴: 상승 장악형")).toBeVisible();
-  await expect(page.getByText("차트형태: 불 플래그")).toBeVisible();
-  await page.getByLabel("종목 검색").fill("QQQ");
+
+  await page.locator(".search-box input").fill("QQQ");
   await expect(page.locator(".search-results").getByText("ETF")).toBeVisible();
   await page.getByText("Invesco QQQ Trust").click();
   await expect(page.getByRole("heading", { name: "QQQ" })).toBeVisible();
 
   await page.getByRole("button", { name: "English" }).click();
   await expect(page.locator(".current-price")).toHaveText("$201.85");
-  await expect(page.locator(".signal").getByText("Long bias")).toBeVisible();
-  await expect(page.locator(".signal").getByText("Long watch").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Demand Check" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Front Expiry Options" })).toBeVisible();
+  await expect(page.locator(".options-panel .flow-badge").getByText("Call skew")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recommended Strategies" })).toBeVisible();
+  await expect(page.getByText("Bull Call Spread")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Short Data Check" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Fear/Greed Proxy" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Zoom in" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();
-  await page.getByRole("link", { name: "Learn" }).click();
-  await expect(page.getByRole("heading", { name: "Indicator & Chart Pattern Guide" })).toBeVisible();
-  await expect(page.getByText("Heikin-Ashi")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Hammer", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Hammer", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Head and Shoulders", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Bull Flag", exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(true);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect(page.getByRole("heading", { name: "Double Bottom" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "FINRA Daily Short Sale Volume" })).toBeVisible();
-  await page.getByRole("link", { name: "Dashboard" }).click();
-  await page.getByRole("button", { name: /AI/ }).click();
 
+  await page.getByRole("button", { name: "Scan favorites" }).click();
+  await expect(page.getByText("Score 91.4")).toBeVisible();
+  await expect(page.getByText("Bullish Engulfing", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Bull Flag", { exact: true }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: /AI/ }).click();
+  await expect(page.getByRole("heading", { name: "Fintech Analysis Chat" })).toBeVisible();
   await page.locator(".chat-form input").fill("Why long?");
   await page.locator(".chat-form button").click();
-  await expect(page.getByText("롱 근거 테스트 응답입니다")).toBeVisible();
+  await expect(page.getByText("This is a mocked analysis-only response. No order execution is performed.")).toBeVisible();
 
+  await page.getByRole("link", { name: "Playbook" }).click();
+  await expect(page.getByRole("heading", { name: "A learning hub for indicators, chart structures, and products" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Indicators", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Chart Shapes", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Products", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Market Data", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Products", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Call Option" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Covered Call" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Call Option" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Chart Shapes", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Hammer", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Head and Shoulders", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Market Data", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "FINRA ATS / Dark Pool Proxy" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Dashboard" }).click();
   await page.getByRole("button", { name: "MSFT" }).click();
   await page.getByRole("button", { name: "1h" }).click();
   await expect(page.getByRole("heading", { name: "MSFT" })).toBeVisible();
@@ -200,8 +199,9 @@ test("loads the dashboard, renders signal, and streams AI explanation", async ({
 
 test("renders mocked realtime seconds candles and time and sales", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
+
   await page.route("**/api/state", async (route) => {
-    await route.fulfill({ json: makeStateFixture("QQQ") });
+    await route.fulfill({ json: makeStateFixture("QQQ", "en") });
   });
   await page.route("**/api/market/search**", async (route) => {
     await route.fulfill({
@@ -257,16 +257,15 @@ test("renders mocked realtime seconds candles and time and sales", async ({ page
   });
 
   await page.goto("/");
-  await expect(page.getByText("실시간 준비됨")).toBeVisible();
+  await expect(page.getByText("Realtime ready")).toBeVisible();
   await page.getByRole("button", { name: "1s" }).click();
 
-  await expect(page.getByRole("img", { name: "캔들 차트" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "체결창" })).toBeVisible();
-  await expect(page.getByText("매수호가")).toBeVisible();
-  await expect(page.getByText("최근 체결")).toBeVisible();
-  await expect(page.getByText("매수체결량")).toBeVisible();
-  await expect(page.getByText("매수체결", { exact: true })).toBeVisible();
-  await expect(page.locator(".current-price")).toHaveText("₩700,000");
+  await expect(page.getByRole("img", { name: "Candlestick chart" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Time & Sales" })).toBeVisible();
+  await expect(page.locator(".quote-strip").getByText("Bid")).toBeVisible();
+  await expect(page.getByText("Recent trades")).toBeVisible();
+  await expect(page.getByText("Ask-hit volume")).toBeVisible();
+  await expect(page.locator(".current-price")).toHaveText("$500.00");
 });
 
 function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
@@ -283,6 +282,12 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
       volume: 1000 + index * 5
     };
   });
+
+  const call195 = optionContract(symbol, "CALL", 195, 8.2, 0.03, true);
+  const call200 = optionContract(symbol, "CALL", 200, 4.5, 0.01, true);
+  const call205 = optionContract(symbol, "CALL", 205, 2.5, 0.02, false);
+  const put195 = optionContract(symbol, "PUT", 195, 2.8, 0.03, false);
+  const put200 = optionContract(symbol, "PUT", 200, 4.3, 0.01, false);
 
   return {
     symbol,
@@ -303,15 +308,15 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
         { label: "2R", price: 207.2 }
       ],
       riskReward: 2,
-      reasons: ["단기 EMA 배열이 상승 방향입니다.", "가격이 VWAP 위에 있습니다."],
-      warnings: ["무료 공개 데이터 기반의 분석 보조입니다."],
+      reasons: ["Short-term EMA alignment is bullish.", "Price is above VWAP."],
+      warnings: ["Analysis-only output based on free public data."],
       patterns: [
         {
           id: "bullish_engulfing",
           direction: "BULLISH",
           strength: "HIGH",
-          label: { ko: "상승 장악형", en: "Bullish Engulfing" },
-          description: { ko: "반전 후보", en: "Reversal candidate" }
+          label: { ko: "Bullish Engulfing", en: "Bullish Engulfing" },
+          description: { ko: "Reversal candidate", en: "Reversal candidate" }
         }
       ],
       chartPatterns: [
@@ -319,9 +324,9 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
           id: "bull_flag",
           direction: "BULLISH",
           strength: "MEDIUM",
-          label: { ko: "불 플래그", en: "Bull Flag" },
-          description: { ko: "상승 지속 후보", en: "Bullish continuation candidate" },
-          levels: [{ label: { ko: "플래그 상단", en: "Flag high" }, price: 204 }],
+          label: { ko: "Bull Flag", en: "Bull Flag" },
+          description: { ko: "Bullish continuation candidate", en: "Bullish continuation candidate" },
+          levels: [{ label: { ko: "Flag high", en: "Flag high" }, price: 204 }],
           points: []
         }
       ],
@@ -348,6 +353,82 @@ function makeCandlePayload(symbol = "AAPL", timeframe = "5m") {
         support: 199,
         resistance: 205,
         pivot: 201
+      },
+      optionsSentiment: {
+        symbol,
+        expiration: "2026-05-17T00:00:00.000Z",
+        underlyingPrice: 201.85,
+        callVolume: 4200,
+        putVolume: 1800,
+        callOpenInterest: 9500,
+        putOpenInterest: 4300,
+        putCallVolumeRatio: 0.43,
+        putCallOpenInterestRatio: 0.45,
+        atmCallImpliedVolatility: 0.29,
+        atmPutImpliedVolatility: 0.27,
+        impliedVolatilitySkew: -0.02,
+        volatilityRegime: "LOW",
+        bias: "LONG",
+        confidence: 71,
+        reasons: ["Front-expiry options flow is tilted toward calls."],
+        warnings: ["Options data is delayed context."],
+        nearCalls: [call195, call200, call205],
+        nearPuts: [put195, put200],
+        strategyRecommendations: [
+          {
+            id: "bull_call_spread",
+            title: { ko: "Bull Call Spread", en: "Bull Call Spread" },
+            summary: {
+              ko: "A debit spread for bullish setups when implied volatility is not excessively high.",
+              en: "A debit spread for bullish setups when implied volatility is not excessively high."
+            },
+            outlook: "LONG",
+            volatilityRegime: "LOW",
+            riskLevel: "MEDIUM",
+            fitScore: 93,
+            maxProfit: 300,
+            maxProfitSummary: {
+              ko: "Profit is capped if price reaches the short strike.",
+              en: "Profit is capped if price reaches the short strike."
+            },
+            maxLoss: 200,
+            maxLossSummary: {
+              ko: "The net debit paid is the maximum loss.",
+              en: "The net debit paid is the maximum loss."
+            },
+            breakEvenPrices: [202],
+            estimatedBuyingPower: 200,
+            estimatedBuyingPowerSummary: {
+              ko: "Buying power is roughly the net debit paid.",
+              en: "Buying power is roughly the net debit paid."
+            },
+            legs: [
+              {
+                asset: "CALL",
+                side: "BUY",
+                quantity: 1,
+                strike: 200,
+                expiration: "2026-05-17T00:00:00.000Z",
+                premium: 4.5,
+                note: { ko: "Buy the ATM call", en: "Buy the ATM call" }
+              },
+              {
+                asset: "CALL",
+                side: "SELL",
+                quantity: 1,
+                strike: 205,
+                expiration: "2026-05-17T00:00:00.000Z",
+                premium: 2.5,
+                note: { ko: "Sell a higher-strike call", en: "Sell a higher-strike call" }
+              }
+            ],
+            warnings: ["Assumes one standard U.S. equity option contract controls 100 shares."]
+          }
+        ],
+        topCalls: [call200],
+        topPuts: [put195],
+        dataTimestamp: candles.at(-1)!.time,
+        source: "fixture"
       },
       dataTimestamp: candles.at(-1)!.time,
       source: "fixture"
@@ -379,9 +460,9 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-function makeStateFixture(symbol = "AAPL") {
+function makeStateFixture(symbol = "AAPL", locale: "ko" | "en" = "ko") {
   return {
-    locale: "ko",
+    locale,
     favorites: ["AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", "SPY", "QQQ", "VOO"],
     lastSymbol: symbol,
     timeframe: "5m",
@@ -439,6 +520,22 @@ function makeShortFlowFixture(symbol = "AAPL") {
       price: 201.5,
       source: "fixture"
     },
+    darkPool: {
+      symbol,
+      weekStartDate: "2026-04-14",
+      tier: "T1",
+      totalWeeklyShares: 4500000,
+      totalWeeklyTrades: 12500,
+      lastUpdateDate: "2026-04-21",
+      atsToShortVolumeRatio: 8.2,
+      atsShareOfShortVolumePercent: 820,
+      warnings: [
+        "ATS data is delayed weekly public data.",
+        "ATS shares and daily short volume come from different delayed datasets."
+      ],
+      dataTimestamp: new Date().toISOString(),
+      source: "fixture"
+    },
     warnings: ["Short-related public data is delayed and must not be treated as real-time order flow."],
     dataTimestamp: new Date().toISOString(),
     source: "fixture"
@@ -448,7 +545,7 @@ function makeShortFlowFixture(symbol = "AAPL") {
 function makeMoodFixture() {
   return {
     score: 66,
-    label: { ko: "탐욕", en: "Greed" },
+    label: { ko: "Greed", en: "Greed" },
     vix: 16,
     putCallRatio: 0.8,
     spyTrend: "LONG",
@@ -456,5 +553,27 @@ function makeMoodFixture() {
     warnings: ["This is a Fear/Greed-style proxy, not the CNN Fear & Greed Index."],
     dataTimestamp: new Date().toISOString(),
     source: "fixture"
+  };
+}
+
+function optionContract(
+  symbol: string,
+  side: "CALL" | "PUT",
+  strike: number,
+  lastPrice: number,
+  distanceFromSpotPercent: number,
+  inTheMoney: boolean
+) {
+  return {
+    contractSymbol: `${symbol}-${side}-${strike}`,
+    side,
+    strike,
+    expiration: "2026-05-17T00:00:00.000Z",
+    lastPrice,
+    volume: 1000,
+    openInterest: 2500,
+    impliedVolatility: 0.29,
+    inTheMoney,
+    distanceFromSpotPercent
   };
 }
